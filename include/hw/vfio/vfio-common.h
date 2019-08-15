@@ -255,5 +255,6 @@ int vfio_spapr_remove_window(VFIOContainer *container,
 
 int vfio_migration_probe(VFIODevice *vbasedev, Error **errp);
 void vfio_migration_finalize(VFIODevice *vbasedev);
+void vfio_bars_set_trap(VFIODevice *vbasedev, bool trap);
 
 #endif /* HW_VFIO_VFIO_COMMON_H */

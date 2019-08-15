@@ -445,6 +445,7 @@ static int vfio_save_setup(QEMUFile *f, void *opaque)
         return ret;
     }
 
+    vfio_bars_set_trap(vbasedev, true);
     return 0;
 }
 
@@ -453,6 +454,8 @@ static void vfio_save_cleanup(void *opaque)
     VFIODevice *vbasedev = opaque;
 
     vfio_migration_cleanup(vbasedev);
+
+    vfio_bars_set_trap(vbasedev, false);
     trace_vfio_save_cleanup(vbasedev->name);
 }
 
