@@ -839,7 +839,7 @@ FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
             "la57", NULL, NULL, NULL,
             NULL, NULL, "rdpid", NULL,
             "bus-lock-detect", "cldemote", NULL, "movdiri",
-            "movdir64b", NULL, "sgxlc", "pks",
+            "movdir64b", "enqcmd", "sgxlc", "pks",
         },
         .cpuid = {
             .eax = 7,
