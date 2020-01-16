@@ -67,6 +67,7 @@ typedef struct VTDHostIOMMUContext VTDHostIOMMUContext;
 typedef struct VTDPASIDCacheEntry VTDPASIDCacheEntry;
 typedef struct VTDPASIDAddressSpace VTDPASIDAddressSpace;
 typedef struct VTDPageReqDsc VTDPageReqDsc;
+typedef struct VTDPRQEntry VTDPRQEntry;
 
 /* Context-Entry */
 struct VTDContextEntry {
@@ -186,6 +187,13 @@ struct VTDPageReqDsc {
         uint64_t qw_1;
     };
     uint64_t priv_data[2];
+};
+
+struct VTDPRQEntry {
+    PCIBus *bus;
+    int devfn;
+    VTDPageReqDsc prq;
+    QLIST_ENTRY(VTDPRQEntry) next;
 };
 
 /* VT-d Source-ID Qualifier types */
@@ -336,6 +344,9 @@ struct IntelIOMMUState {
 
     /* list of VTDHostIOMMUContexts */
     QLIST_HEAD(, VTDHostIOMMUContext) vtd_dev_icx_list;
+
+    /* list of VTDPRQEntry which were recevied and injected to guest */
+    QLIST_HEAD(, VTDPRQEntry) vtd_prq_list;
 
     /* interrupt remapping */
     bool intr_enabled;              /* Whether guest enabled IR */

@@ -3416,11 +3416,95 @@ done:
     return true;
 }
 
+static VTDBus *vtd_find_add_bus(IntelIOMMUState *s, PCIBus *bus);
+
+static int vtd_dev_send_page_response(IntelIOMMUState *s, PCIBus *bus,
+                                      int devfn,
+                                      struct iommu_page_response *pg_resp)
+{
+    VTDHostIOMMUContext *vtd_dev_icx;
+    HostIOMMUContext *iommu_ctx;
+    VTDBus *vtd_bus;
+    int ret = -EINVAL;
+
+    vtd_bus = vtd_find_add_bus(s, bus);
+
+    vtd_iommu_lock(s);
+    vtd_dev_icx = vtd_bus->dev_icx[devfn];
+    if (!vtd_dev_icx) {
+        /* means no need to go further, e.g. for emulated devices */
+        ret = 0;
+        goto out_unlock;
+    }
+    iommu_ctx = vtd_dev_icx->iommu_ctx;
+    if (!iommu_ctx) {
+        ret = -EINVAL;
+        goto out_unlock;
+    }
+    ret = host_iommu_ctx_page_response(iommu_ctx, pg_resp);
+out_unlock:
+    vtd_iommu_unlock(s);
+    return ret;
+}
+
 static bool vtd_process_page_group_response(IntelIOMMUState *s,
                                             VTDInvDesc *inv_desc)
 {
+    struct iommu_page_response pg_resp;
+    VTDPRQEntry *vtd_prq, *tmp;
+
     printf("%s: page response: hi=0x%lx lo=0x%lx\n"
            , __func__, inv_desc->val[1], inv_desc->val[0]);
+    /*
+     * REVISIT: private data from the guest is not sent back with
+     * the page response in that host is tracking the private and
+     * response is in order. Host IOMMU driver will match the private
+     * data then respond back to the IOMMU hardware.
+     */
+    pg_resp.argsz = sizeof(pg_resp);
+    pg_resp.version = IOMMU_PAGE_RESP_VERSION_1;
+    pg_resp.pasid = inv_desc->resp.pasid;
+    pg_resp.code = inv_desc->resp.resp_code;
+    pg_resp.flags = inv_desc->resp.pasid_present ?
+                                 IOMMU_PAGE_RESP_PASID_VALID : 0;
+    pg_resp.grpid = inv_desc->resp.grpid;
+    printf("%s, PASID %d pg_resp flags %x\n", __func__, pg_resp.pasid, pg_resp.flags);
+
+    /*
+     * YI: TODO: needs to do lpig and prg_index check in the prq
+     * filtering. May just like what kernel does. How about pdp?
+     * Should a pdp match also mean a hit? Will there be multiple
+     *  prqs in the list with the same pasid?
+     */
+    QLIST_FOREACH_SAFE(vtd_prq, &s->vtd_prq_list, next, tmp) {
+        if ((vtd_prq->prq.rid == inv_desc->resp.rid) &&
+            (vtd_prq->prq.prg_index == inv_desc->resp.grpid)) {
+            if ((vtd_prq->prq.pasid_present != inv_desc->resp.pasid_present) ||
+                (inv_desc->resp.pasid_present &&
+                                 vtd_prq->prq.pasid != inv_desc->resp.pasid)) {
+                continue;
+            }
+            /*
+             * Yi: if response failed, should return error to guest.
+             * Que: shoud vIOMMU assume there will be multiple matched
+             * prqs in the list? may be not as only prqs with lpig or
+             * private data is added in the prq_list. Also one response
+             * should response one prq. Only when the response succeed
+             * , should the prq be freed in this list in case of guest
+             * does retry.
+             */
+            if (!vtd_dev_send_page_response(s, vtd_prq->bus,
+                                            vtd_prq->devfn, &pg_resp)) {
+                QLIST_REMOVE(vtd_prq, next);
+                g_free(vtd_prq);
+            } else {
+                error_report_once("%s: page response failed, resp_desc: "
+                          "hi=%"PRIx64", lo=%"PRIx64, __func__,
+                          inv_desc->val[1], inv_desc->val[0]);
+            }
+            break;
+        }
+    }
     return true;
 }
 
@@ -4940,6 +5024,18 @@ static int vtd_dev_report_iommu_fault(PCIBus *bus, void *opaque,
         prq.priv_data[1] = (IOMMU_FAULT_PAGE_REQUEST_PRIV_DATA
                     & fault->prm.flags) ? fault->prm.private_data[1] : 0x0;
         vtd_report_page_request(s, &prq);
+        if (prq.lpig) {
+            VTDPRQEntry *prqe;
+
+            prqe = g_malloc0(sizeof(*prqe));
+            prqe->bus = bus;
+            prqe->devfn = devfn;
+            memcpy(&prqe->prq, &prq, sizeof(prq));
+            /* track the received prqs */
+            QLIST_INSERT_HEAD(&s->vtd_prq_list, prqe, next);
+            printf("%s,last page in group track in list, addr: 0x%lx\n",
+                                          __func__, (unsigned long) prq.addr);
+        }
         ret = 0;
         break;
     default:
@@ -5424,6 +5520,7 @@ static void vtd_realize(DeviceState *dev, Error **errp)
 
     QLIST_INIT(&s->vtd_as_with_notifiers);
     QLIST_INIT(&s->vtd_dev_icx_list);
+    QLIST_INIT(&s->vtd_prq_list);
     qemu_mutex_init(&s->iommu_lock);
     s->cap_finalized = false;
     memset(s->vtd_as_by_bus_num, 0, sizeof(s->vtd_as_by_bus_num));
