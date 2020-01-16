@@ -3476,6 +3476,7 @@ static bool vtd_process_page_group_response(IntelIOMMUState *s,
      * Should a pdp match also mean a hit? Will there be multiple
      *  prqs in the list with the same pasid?
      */
+    qemu_mutex_lock(&s->prq_lock);
     QLIST_FOREACH_SAFE(vtd_prq, &s->vtd_prq_list, next, tmp) {
         if ((vtd_prq->prq.rid == inv_desc->resp.rid) &&
             (vtd_prq->prq.prg_index == inv_desc->resp.grpid)) {
@@ -3505,6 +3506,7 @@ static bool vtd_process_page_group_response(IntelIOMMUState *s,
             break;
         }
     }
+    qemu_mutex_unlock(&s->prq_lock);
     return true;
 }
 
@@ -3857,13 +3859,16 @@ static void vtd_handle_pqh_write(IntelIOMMUState *s, uint64_t val)
     /* Update prq_entry_count as consumer may have de-queue some entries */
 printf("%s, head_n: %d, tail_nb: %d, old prq_head_nb: %lu\n", __func__, head_nb, tail_nb, (s->prq_head >> s->prq_entry_size_order));
 printf("%s, s->prq_entry_count: %d - 1\n", __func__, s->prq_entry_count);
+    qemu_mutex_lock(&s->prq_lock);
     s->prq_entry_count = (tail_nb - head_nb) & (s->prq_nb_entries - 1);
 printf("%s, s->prq_entry_count: %d - 2\n", __func__, s->prq_entry_count);
     s->prq_head = val;
+    qemu_mutex_unlock(&s->prq_lock);
 }
 
 static void vtd_handle_pqa_write(IntelIOMMUState *s, uint64_t val)
 {
+    qemu_mutex_lock(&s->prq_lock);
     s->pqa = val & VTD_PQA_ADDR_MASK(s->aw_bits);
     s->prq_head = 0;
     s->prq_tail = 0;
@@ -3873,6 +3878,7 @@ static void vtd_handle_pqa_write(IntelIOMMUState *s, uint64_t val)
              ((val & VTD_PQA_QS_MASK) + 12 - s->prq_entry_size_order);
     s->prq_qsize = 1ULL << ((val & VTD_PQA_QS_MASK) + 12);
     s->prq_entry_count = 0;
+    qemu_mutex_unlock(&s->prq_lock);
 }
 
 static uint64_t vtd_mem_read(void *opaque, hwaddr addr, unsigned size)
@@ -5024,6 +5030,7 @@ static int vtd_dev_report_iommu_fault(PCIBus *bus, void *opaque,
         prq.priv_data[1] = (IOMMU_FAULT_PAGE_REQUEST_PRIV_DATA
                     & fault->prm.flags) ? fault->prm.private_data[1] : 0x0;
         vtd_report_page_request(s, &prq);
+        qemu_mutex_lock(&s->prq_lock);
         if (prq.lpig) {
             VTDPRQEntry *prqe;
 
@@ -5036,6 +5043,7 @@ static int vtd_dev_report_iommu_fault(PCIBus *bus, void *opaque,
             printf("%s,last page in group track in list, addr: 0x%lx\n",
                                           __func__, (unsigned long) prq.addr);
         }
+        qemu_mutex_unlock(&s->prq_lock);
         ret = 0;
         break;
     default:
@@ -5522,6 +5530,7 @@ static void vtd_realize(DeviceState *dev, Error **errp)
     QLIST_INIT(&s->vtd_dev_icx_list);
     QLIST_INIT(&s->vtd_prq_list);
     qemu_mutex_init(&s->iommu_lock);
+    qemu_mutex_init(&s->prq_lock);
     s->cap_finalized = false;
     memset(s->vtd_as_by_bus_num, 0, sizeof(s->vtd_as_by_bus_num));
     memory_region_init_io(&s->csrmem, OBJECT(s), &vtd_mem_ops, s,

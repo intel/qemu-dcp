@@ -314,6 +314,11 @@ struct IntelIOMMUState {
     bool qi_enabled;                /* Set if the QI is enabled */
     uint8_t iq_last_desc_type;      /* The type of last completed descriptor */
 
+    /*
+     * Protect per-IOMMU prq head/tail/prq_entry_count modifications
+     * and the internal prq list updates.
+     */
+    QemuMutex prq_lock;
     dma_addr_t pqa;                 /* Page Request Queue Pointer */
     uint64_t prq_head;              /* Current PRQ head */
     uint64_t prq_tail;              /* Current PRQ tail */
@@ -321,6 +326,9 @@ struct IntelIOMMUState {
     uint64_t prq_qsize;             /* PRQ size in bytes */
     int prq_nb_entries;             /* PRQ size in number of entries */
     int prq_entry_count;            /* Used number of entries in PRQ */
+    /* list of VTDPRQEntry which were recevied and injected to guest */
+    QLIST_HEAD(, VTDPRQEntry) vtd_prq_list;
+
 
     /* The index of the Fault Recording Register to be used next.
      * Wraps around from N-1 to 0, where N is the number of FRCD_REG.
@@ -344,9 +352,6 @@ struct IntelIOMMUState {
 
     /* list of VTDHostIOMMUContexts */
     QLIST_HEAD(, VTDHostIOMMUContext) vtd_dev_icx_list;
-
-    /* list of VTDPRQEntry which were recevied and injected to guest */
-    QLIST_HEAD(, VTDPRQEntry) vtd_prq_list;
 
     /* interrupt remapping */
     bool intr_enabled;              /* Whether guest enabled IR */
