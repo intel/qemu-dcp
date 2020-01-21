@@ -548,7 +548,7 @@ typedef enum X86Seg {
 #define XSTATE_Hi16_ZMM_BIT             7
 #define XSTATE_RTIT_BIT                 8
 #define XSTATE_PKRU_BIT                 9
-#define XSTATE_RESERVED_10              10
+#define XSTATE_PASID_BIT                10
 #define XSTATE_CET_U_BIT                11
 #define XSTATE_CET_S_BIT                12
 #define XSTATE_RESERVED_13              13
@@ -568,6 +568,7 @@ typedef enum X86Seg {
 #define XSTATE_Hi16_ZMM_MASK            (1ULL << XSTATE_Hi16_ZMM_BIT)
 #define XSTATE_RTIT_MASK                (1ULL << XSTATE_RTIT_BIT)
 #define XSTATE_PKRU_MASK                (1ULL << XSTATE_PKRU_BIT)
+#define XSTATE_PASID_MASK               (1ULL << XSTATE_PASID_BIT)
 #define XSTATE_CET_U_MASK               (1ULL << XSTATE_CET_U_BIT)
 #define XSTATE_CET_S_MASK               (1ULL << XSTATE_CET_S_BIT)
 #define XSTATE_RESERVED_14_MASK         (1ULL << XSTATE_RESERVED_14_BIT)
@@ -1430,6 +1431,11 @@ typedef struct XSavePKRU {
     uint32_t padding;
 } XSavePKRU;
 
+/* Ext. save area 10: PASID state */
+typedef struct XSavePASID {
+    uint64_t pasid_msr;
+} XSavePASID;
+
 /* Ext. save area 11: User mode CET state */
 typedef struct XSavesCETU {
     uint64_t u_cet;
@@ -1478,6 +1484,7 @@ QEMU_BUILD_BUG_ON(sizeof(XSaveOpmask) != 0x40);
 QEMU_BUILD_BUG_ON(sizeof(XSaveZMM_Hi256) != 0x200);
 QEMU_BUILD_BUG_ON(sizeof(XSaveHi16_ZMM) != 0x400);
 QEMU_BUILD_BUG_ON(sizeof(XSavePKRU) != 0x8);
+QEMU_BUILD_BUG_ON(sizeof(XSavePASID) != 0x8);
 QEMU_BUILD_BUG_ON(sizeof(XSavesCETU) != 0x10);
 QEMU_BUILD_BUG_ON(sizeof(XSavesCETS) != 0x18);
 QEMU_BUILD_BUG_ON(sizeof(XSavesArchLBR) != 0x328);

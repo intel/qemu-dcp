@@ -1402,7 +1402,8 @@ static const X86RegisterInfo32 x86_reg_info_32[CPU_NB_REGS32] = {
 #undef REGISTER
 
 /* CPUID feature bits available in XSS */
-#define CPUID_XSTATE_XSS_MASK    (XSTATE_CET_U_MASK | XSTATE_ARCH_LBR_MASK)
+#define CPUID_XSTATE_XSS_MASK    (XSTATE_CET_U_MASK | XSTATE_ARCH_LBR_MASK | \
+                                  XSTATE_PASID_MASK)
 
 ExtSaveArea x86_ext_save_areas[XSAVE_STATE_AREA_COUNT] = {
     [XSTATE_FP_BIT] = {
@@ -1436,6 +1437,10 @@ ExtSaveArea x86_ext_save_areas[XSAVE_STATE_AREA_COUNT] = {
     [XSTATE_PKRU_BIT] =
           { .feature = FEAT_7_0_ECX, .bits = CPUID_7_0_ECX_PKU,
             .size = sizeof(XSavePKRU) },
+    [XSTATE_PASID_BIT] =
+          { .feature = FEAT_7_0_ECX, .bits = CPUID_7_0_ECX_ENQCMD,
+            .offset = 0,
+            .size = sizeof(XSavePASID) },
     [XSTATE_CET_U_BIT] = {
             .feature = FEAT_7_0_ECX, .bits = CPUID_7_0_ECX_CET_SHSTK,
         /*
