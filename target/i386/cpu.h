@@ -1470,6 +1470,7 @@ QEMU_BUILD_BUG_ON(sizeof(XSavesArchLBR) != 0x328);
 typedef struct ExtSaveArea {
     uint32_t feature, bits;
     uint32_t offset, size;
+    uint32_t need_align, support_xfd;
 } ExtSaveArea;
 
 #define XSAVE_STATE_AREA_COUNT (XSTATE_ARCH_LBR + 1)
