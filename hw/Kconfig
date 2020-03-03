@@ -64,6 +64,9 @@ source sparc64/Kconfig
 source tricore/Kconfig
 source xtensa/Kconfig
 
+# iommu Kconfig
+source iommu/Kconfig
+
 # Symbols used by multiple targets
 config TEST_DEVICES
     bool
