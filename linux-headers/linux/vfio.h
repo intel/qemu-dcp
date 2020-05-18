@@ -772,6 +772,17 @@ struct vfio_irq_info_cap_type {
 #define VFIO_IRQ_TYPE_NESTED				(1)
 #define VFIO_IRQ_SUBTYPE_DMA_FAULT			(1)
 
+/* Bar Region Query IRQ TYPE */
+#define VFIO_IRQ_TYPE_REMAP_BAR_REGION                 (2)
+
+/* sub-types for VFIO_IRQ_TYPE_REMAP_BAR_REGION */
+/*
+ * This irq notifies userspace to re-query BAR region and remaps the
+ * subregions.
+ */
+#define VFIO_IRQ_SUBTYPE_REMAP_BAR_REGION      (0)
+
+
 /**
  * VFIO_DEVICE_SET_IRQS - _IOW(VFIO_TYPE, VFIO_BASE + 10, struct vfio_irq_set)
  *

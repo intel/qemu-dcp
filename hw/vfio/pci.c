@@ -2791,6 +2791,35 @@ static void vfio_unregister_err_notifier(VFIOPCIDevice *vdev)
     event_notifier_cleanup(&vdev->err_notifier);
 }
 
+static void vfio_remap_bar_notifier_handler(void *opaque)
+{
+    VFIOPCIExtIRQ *ext_irq = opaque;
+    VFIOPCIDevice *vdev = ext_irq->vdev;
+    uint64_t bars;
+    ssize_t ret;
+    int i;
+
+    printf("%s - 1\n", __func__);
+    ret = read(ext_irq->notifier.rfd, &bars, sizeof(bars));
+    if (ret != sizeof(bars)) {
+            return;
+    }
+    for (i = 0; i < PCI_ROM_SLOT; i++) {
+        VFIORegion *region = &vdev->bars[i].region;
+
+        if (!test_bit(i, &bars)) {
+            continue;
+        }
+
+        vfio_region_reset_mmap(&vdev->vbasedev, region, i);
+    }
+
+    /* write 0 to notify kernel that we're done */
+    bars = 0;
+    ret = write(ext_irq->notifier.wfd, &bars, sizeof(bars));
+    printf("%s - 2, ret: %ld\n", __func__, ret);
+}
+
 static void vfio_req_notifier_handler(void *opaque)
 {
     VFIOPCIDevice *vdev = opaque;
@@ -3323,6 +3352,11 @@ static void vfio_realize(PCIDevice *pdev, Error **errp)
             error_report("%s: Migration disabled", vdev->vbasedev.name);
         }
     }
+
+    vfio_register_ext_irq_handler(vdev,
+                                  VFIO_IRQ_TYPE_REMAP_BAR_REGION,
+                                  VFIO_IRQ_SUBTYPE_REMAP_BAR_REGION,
+                                  vfio_remap_bar_notifier_handler);
 
     vfio_register_err_notifier(vdev);
     vfio_register_req_notifier(vdev);

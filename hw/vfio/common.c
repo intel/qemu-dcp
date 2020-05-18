@@ -1678,6 +1678,56 @@ void vfio_region_unmap(VFIORegion *region)
     }
 }
 
+/*
+ * re-query a region's flags,
+ * and update its mmap'd subregions.
+ * It does not support change a region's size.
+ */
+void vfio_region_reset_mmap(VFIODevice *vbasedev, VFIORegion *region, int index)
+{
+    struct vfio_region_info *new;
+
+    if (!region->mem) {
+        return;
+    }
+
+    if (vfio_get_region_info(vbasedev, index, &new)) {
+        goto out;
+    }
+
+    if (region->size != new->size) {
+        error_report("vfio: resetting of region size is not supported");
+        goto out;
+    }
+
+    if (region->flags == new->flags) {
+        goto out;
+    }
+
+    /* ummap old mmap'd subregions, if any */
+    vfio_region_unmap(region);
+    region->nr_mmaps = 0;
+    g_free(region->mmaps);
+    region->mmaps = NULL;
+
+    /* setup new mmap'd subregions*/
+    region->flags = new->flags;
+    if (vbasedev->no_mmap ||
+            !(region->flags & VFIO_REGION_INFO_FLAG_MMAP)) {
+        goto out;
+    }
+
+    if (vfio_setup_region_sparse_mmaps(region, new)) {
+        region->nr_mmaps = 1;
+        region->mmaps = g_new0(VFIOMmap, region->nr_mmaps);
+        region->mmaps[0].offset = 0;
+        region->mmaps[0].size = region->size;
+    }
+    vfio_region_mmap(region);
+out:
+    g_free(new);
+}
+
 void vfio_region_exit(VFIORegion *region)
 {
     int i;
