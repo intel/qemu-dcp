@@ -776,6 +776,13 @@ static void vfio_migration_state_notifier(Notifier *notifier, void *data)
         if (ret) {
             error_report("%s: Failed to set state RUNNING", vbasedev->name);
         }
+        break;
+    case MIGRATION_STATUS_COMPLETING:
+        ret = vfio_migration_set_state(vbasedev, 0, VFIO_DEVICE_STATE_SAVING);
+        if (ret) {
+            error_report("%s: Failed to set state STOPPED", vbasedev->name);
+        }
+        break;
     }
 }
 
