@@ -1743,6 +1743,24 @@ void vfio_region_mmaps_set_enabled(VFIORegion *region, bool enabled)
                                         enabled);
 }
 
+void vfio_region_mmaps_set_enabled_locked(VFIORegion *region, bool enabled)
+{
+    int i;
+
+    if (!region->mem) {
+        return;
+    }
+
+    for (i = 0; i < region->nr_mmaps; i++) {
+        if (region->mmaps[i].mmap) {
+            memory_region_set_enabled_locked(&region->mmaps[i].mem, enabled);
+        }
+    }
+
+    trace_vfio_region_mmaps_set_enabled(memory_region_name(region->mem),
+                                        enabled);
+}
+
 void vfio_reset_handler(void *opaque)
 {
     VFIOGroup *group;

@@ -1085,12 +1085,9 @@ void memory_region_transaction_begin(void)
     ++memory_region_transaction_depth;
 }
 
-void memory_region_transaction_commit(void)
+static void memory_region_transaction_commit_locked(void)
 {
     AddressSpace *as;
-
-    assert(memory_region_transaction_depth);
-    assert(qemu_mutex_iothread_locked());
 
     --memory_region_transaction_depth;
     if (!memory_region_transaction_depth) {
@@ -1113,6 +1110,14 @@ void memory_region_transaction_commit(void)
             ioeventfd_update_pending = false;
         }
    }
+}
+
+void memory_region_transaction_commit(void)
+{
+    assert(memory_region_transaction_depth);
+    assert(qemu_mutex_iothread_locked());
+
+    memory_region_transaction_commit_locked();
 }
 
 static void memory_region_destructor_none(MemoryRegion *mr)
@@ -2568,6 +2573,20 @@ void memory_region_set_enabled(MemoryRegion *mr, bool enabled)
     mr->enabled = enabled;
     memory_region_update_pending = true;
     memory_region_transaction_commit();
+}
+
+/**
+ * Caller should hold qemu_global_mutex
+ */
+void memory_region_set_enabled_locked(MemoryRegion *mr, bool enabled)
+{
+    if (enabled == mr->enabled) {
+        return;
+    }
+    memory_region_transaction_begin();
+    mr->enabled = enabled;
+    memory_region_update_pending = true;
+    memory_region_transaction_commit_locked();
 }
 
 void memory_region_set_size(MemoryRegion *mr, uint64_t size)
