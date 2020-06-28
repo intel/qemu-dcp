@@ -88,6 +88,25 @@ int host_iommu_ctx_flush_stage1_cache(HostIOMMUContext *iommu_ctx,
     return hicxc->flush_stage1_cache(iommu_ctx, cache);
 }
 
+int host_iommu_ctx_page_response(HostIOMMUContext *iommu_ctx,
+                                 struct iommu_page_response *resp)
+{
+    HostIOMMUContextClass *hicxc;
+
+    hicxc = HOST_IOMMU_CONTEXT_GET_CLASS(iommu_ctx);
+
+    if (!hicxc) {
+        return -EINVAL;
+    }
+
+    if (!(iommu_ctx->info->features & IOMMU_NESTING_FEAT_PAGE_RESP) ||
+        !hicxc->page_response) {
+        return -EINVAL;
+    }
+
+    return hicxc->page_response(iommu_ctx, resp);
+}
+
 void host_iommu_ctx_init(void *_iommu_ctx, size_t instance_size,
                          const char *mrtypename,
                          struct iommu_nesting_info *info)

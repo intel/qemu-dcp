@@ -1950,6 +1950,29 @@ static int vfio_host_iommu_ctx_flush_stage1_cache(HostIOMMUContext *iommu_ctx,
     return ret;
 }
 
+static int vfio_host_iommu_ctx_page_response(HostIOMMUContext *iommu_ctx,
+                                        struct iommu_page_response *resp)
+{
+    VFIOContainer *container = container_of(iommu_ctx,
+                                            VFIOContainer, iommu_ctx);
+    struct vfio_iommu_type1_nesting_op *op;
+    unsigned long argsz;
+    int ret = 0;
+
+    argsz = sizeof(*op) + sizeof(*resp);
+    op = g_malloc0(argsz);
+    op->argsz = argsz;
+    op->flags = VFIO_IOMMU_NESTING_OP_PAGE_RESP;
+    memcpy(&op->data, resp, sizeof(*resp));
+
+    if (ioctl(container->fd, VFIO_IOMMU_NESTING_OP, op)) {
+        ret = -errno;
+        error_report("%s: iommu page response failed: %m", __func__);
+    }
+    g_free(op);
+    return ret;
+}
+
 /**
  * Get iommu info from host. Caller of this funcion should free
  * the memory pointed by the returned pointer stored in @info
@@ -2836,6 +2859,7 @@ static void vfio_host_iommu_context_class_init(ObjectClass *klass,
     hicxc->bind_stage1_pgtbl = vfio_host_iommu_ctx_bind_stage1_pgtbl;
     hicxc->unbind_stage1_pgtbl = vfio_host_iommu_ctx_unbind_stage1_pgtbl;
     hicxc->flush_stage1_cache = vfio_host_iommu_ctx_flush_stage1_cache;
+    hicxc->page_response = vfio_host_iommu_ctx_page_response;
 }
 
 static const TypeInfo vfio_host_iommu_context_info = {
