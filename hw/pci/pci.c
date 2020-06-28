@@ -2818,6 +2818,22 @@ void pci_device_unset_iommu_context(PCIDevice *dev)
     }
 }
 
+int pci_device_report_iommu_fault(PCIDevice *dev,
+                                  int count,
+                                  struct iommu_fault *buf)
+{
+    PCIBus *bus;
+    uint8_t devfn;
+
+    pci_device_get_iommu_bus_devfn(dev, &bus, &devfn);
+    if (bus && bus->iommu_ops &&
+        bus->iommu_ops->report_iommu_fault) {
+        return bus->iommu_ops->report_iommu_fault(bus,
+                              bus->iommu_opaque, devfn, count, buf);
+    }
+    return 0;
+}
+
 void pci_setup_iommu(PCIBus *bus, const PCIIOMMUOps *ops, void *opaque)
 {
     bus->iommu_ops = ops;

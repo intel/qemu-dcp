@@ -505,6 +505,9 @@ struct PCIIOMMUOps {
                              HostIOMMUContext *iommu_ctx);
     void (*unset_iommu_context)(PCIBus *bus, void *opaque,
                                 int32_t devfn);
+    int (*report_iommu_fault)(PCIBus *bus, void *opaque,
+                             int32_t devfn, int count,
+                             struct iommu_fault *buf);
 };
 
 AddressSpace *pci_device_iommu_address_space(PCIDevice *dev);
@@ -512,6 +515,9 @@ int pci_device_get_iommu_attr(PCIDevice *dev, IOMMUAttr attr, void *data);
 int pci_device_set_iommu_context(PCIDevice *dev,
                                  HostIOMMUContext *iommu_ctx);
 void pci_device_unset_iommu_context(PCIDevice *dev);
+int pci_device_report_iommu_fault(PCIDevice *dev,
+                                  int count,
+                                  struct iommu_fault *buf);
 void pci_setup_iommu(PCIBus *bus, const PCIIOMMUOps *iommu_ops, void *opaque);
 
 static inline void
