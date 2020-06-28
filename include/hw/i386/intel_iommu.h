@@ -66,6 +66,7 @@ typedef struct VTDPASIDEntry VTDPASIDEntry;
 typedef struct VTDHostIOMMUContext VTDHostIOMMUContext;
 typedef struct VTDPASIDCacheEntry VTDPASIDCacheEntry;
 typedef struct VTDPASIDAddressSpace VTDPASIDAddressSpace;
+typedef struct VTDPageReqDsc VTDPageReqDsc;
 
 /* Context-Entry */
 struct VTDContextEntry {
@@ -157,6 +158,34 @@ struct VTDIOTLBEntry {
     uint64_t slpte;
     uint64_t mask;
     uint8_t access_flags;
+};
+
+struct VTDPageReqDsc {
+    union {
+        struct {
+            uint64_t type:8;
+            uint64_t pasid_present:1;
+            uint64_t priv_data_present:1;
+            uint64_t rsvd:6;
+            uint64_t rid:16;
+            uint64_t pasid:20;
+            uint64_t exe_req:1;
+            uint64_t pm_req:1;
+            uint64_t rsvd2:10;
+        };
+        uint64_t qw_0;
+    };
+    union {
+        struct {
+            uint64_t rd_req:1;
+            uint64_t wr_req:1;
+            uint64_t lpig:1;
+            uint64_t prg_index:9;
+            uint64_t addr:52;
+        };
+        uint64_t qw_1;
+    };
+    uint64_t priv_data[2];
 };
 
 /* VT-d Source-ID Qualifier types */
