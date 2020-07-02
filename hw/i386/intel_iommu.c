@@ -5254,8 +5254,10 @@ static void vtd_init(IntelIOMMUState *s)
         s->ecap |= VTD_ECAP_SMTS | VTD_ECAP_SRS | VTD_ECAP_SLTS;
     } else if (s->scalable_mode && s->scalable_modern) {
         s->ecap |= VTD_ECAP_SMTS | VTD_ECAP_SRS | VTD_ECAP_PASID |
-                   VTD_ECAP_FLTS | VTD_ECAP_PSS(VTD_PASID_SS) |
-                   VTD_ECAP_VCS  | VTD_ECAP_PRS;
+                   VTD_ECAP_PSS(VTD_PASID_SS) | VTD_ECAP_VCS  | VTD_ECAP_PRS;
+        if (s->aw_bits == VTD_HOST_AW_48BIT) {
+            s->ecap |= VTD_ECAP_FLTS;
+        }
         s->vccap |= VTD_VCCAP_PAS;
     }
 
