@@ -115,6 +115,7 @@ struct VTDPASIDAddressSpace {
     AddressSpace as;
     uint32_t pasid;
     IntelIOMMUState *iommu_state;
+    bool bound_to_host;
     VTDContextCacheEntry context_cache_entry;
     QLIST_ENTRY(VTDPASIDAddressSpace) next;
     VTDPASIDCacheEntry pasid_cache_entry;

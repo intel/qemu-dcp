@@ -2065,6 +2065,16 @@ static int vtd_bind_guest_pasid(VTDPASIDAddressSpace *vtd_pasid_as,
         return -EINVAL;
     }
 
+    /*
+     * If a pasid # whose PGTT is switched from non-pt to pt, such case
+     * means we need to unbind prior bind even if the op is BIND.
+     */
+    if (op == VTD_PASID_BIND &&
+        vtd_pe_pt_enabled(pe) &&
+        vtd_pasid_as->bound_to_host) {
+        op = VTD_PASID_UNBIND;
+    }
+
     switch (op) {
     case VTD_PASID_BIND:
     {
@@ -2097,7 +2107,13 @@ static int vtd_bind_guest_pasid(VTDPASIDAddressSpace *vtd_pasid_as,
                                             IOMMU_SVA_VTD_GPASID_CD : 0);
         g_bind_data->vendor.vtd.pat = VTD_SM_PASID_ENTRY_PAT(pe->val[1]);
         g_bind_data->vendor.vtd.emt = VTD_SM_PASID_ENTRY_EMT(pe->val[1]);
-        ret = host_iommu_ctx_bind_stage1_pgtbl(iommu_ctx, g_bind_data);
+        /* Only bind to host when guest pgtt!=pt */
+        if (!vtd_pe_pt_enabled(pe)) {
+            ret = host_iommu_ctx_bind_stage1_pgtbl(iommu_ctx, g_bind_data);
+            if (ret == 0) {
+                vtd_pasid_as->bound_to_host = true;
+            }
+        }
         g_free(g_bind_data);
         break;
     }
@@ -2113,7 +2129,13 @@ static int vtd_bind_guest_pasid(VTDPASIDAddressSpace *vtd_pasid_as,
         g_unbind_data->hpasid = pasid;
         if (pasid == rid2pasid)
             g_unbind_data->flags |= IOMMU_SVA_HPASID_DEF;
-        ret = host_iommu_ctx_unbind_stage1_pgtbl(iommu_ctx, g_unbind_data);
+        if (vtd_pasid_as->bound_to_host) {
+            /* Only do unbind from host when it was bound once */
+            ret = host_iommu_ctx_unbind_stage1_pgtbl(iommu_ctx, g_unbind_data);
+            if (ret == 0) {
+                vtd_pasid_as->bound_to_host = false;
+            }
+        }
         g_free(g_unbind_data);
         break;
     }
