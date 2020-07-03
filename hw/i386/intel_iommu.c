@@ -1630,6 +1630,11 @@ static int vtd_sync_shadow_page_table(VTDAddressSpace *vtd_as)
     return vtd_sync_shadow_page_table_range(vtd_as, &ce, 0, UINT64_MAX);
 }
 
+static bool vtd_pe_pt_enabled(VTDPASIDEntry *pe)
+{
+    return (VTD_PE_GET_TYPE(pe) == VTD_SM_PASID_ENTRY_PT);
+}
+
 /*
  * Check if specific device is configured to bypass address
  * translation for DMA requests. In Scalable Mode, bypass
@@ -1665,7 +1670,7 @@ static bool vtd_dev_pt_enabled(VTDAddressSpace *as)
                               __func__, ret);
             return false;
         }
-        return (VTD_PE_GET_TYPE(&pe) == VTD_SM_PASID_ENTRY_PT);
+        return vtd_pe_pt_enabled(&pe);
     }
 
     return (vtd_ce_get_type(&ce) == VTD_CONTEXT_TT_PASS_THROUGH);
