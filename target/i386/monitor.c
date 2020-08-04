@@ -30,6 +30,7 @@
 #include "qapi/qmp/qdict.h"
 #include "qapi/qmp/qerror.h"
 #include "sysemu/kvm.h"
+#include "sysemu/tdx.h"
 #include "qapi/error.h"
 #include "qapi/qapi-commands-misc-target.h"
 #include "qapi/qapi-commands-misc.h"
@@ -672,4 +673,26 @@ void hmp_info_io_apic(Monitor *mon, const QDict *qdict)
 {
     monitor_printf(mon, "This command is obsolete and will be "
                    "removed soon. Please use 'info pic' instead.\n");
+}
+
+TDXInfo *qmp_query_tdx(Error **errp)
+{
+    TDXInfo *info;
+
+    info = tdx_get_info();
+    if (!info) {
+        error_setg(errp, "TDX is not available.");
+    }
+    return info;
+}
+
+TDXCapability *qmp_query_tdx_capabilities(Error **errp)
+{
+    TDXCapability *cap;
+
+    cap = tdx_get_capabilities();
+    if (!cap) {
+        error_setg(errp, "TDX is not available.");
+    }
+    return cap;
 }
