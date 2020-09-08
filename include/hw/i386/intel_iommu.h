@@ -68,6 +68,7 @@ typedef struct VTDPASIDCacheEntry VTDPASIDCacheEntry;
 typedef struct VTDPASIDAddressSpace VTDPASIDAddressSpace;
 typedef struct VTDPageReqDsc VTDPageReqDsc;
 typedef struct VTDPRQEntry VTDPRQEntry;
+typedef struct VTDPASIDStoreEntry VTDPASIDStoreEntry;
 
 /* Context-Entry */
 struct VTDContextEntry {
@@ -286,6 +287,12 @@ union VTD_IR_MSIAddress {
 /* When IR is enabled, all MSI/MSI-X data bits should be zero */
 #define VTD_IR_MSI_DATA          (0)
 
+struct VTDPASIDStoreEntry {
+    uint32_t gpasid;
+    uint32_t hpasid;
+    bool allocated;
+};
+
 /* The iommu (DMAR) device state struct */
 struct IntelIOMMUState {
     X86IOMMUState x86_iommu;
@@ -373,6 +380,9 @@ struct IntelIOMMUState {
     int ioasid_fd;                  /* /dev/ioasid FD */
     uint32_t ioasid_bits;           /* IOASID width supported by
                                        host (in bits) */
+    bool non_identical_pasid;       /* False: guest PASID equals to host PASID */
+    uint32_t next_idx;
+    VTDPASIDStoreEntry vtd_pasid[1024][1024];
 
     bool cap_finalized;             /* Whether VTD capability finalized */
     /*

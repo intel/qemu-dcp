@@ -2495,6 +2495,8 @@ static int vtd_dev_get_rid2pasid(IntelIOMMUState *s,
     return pasid;
 }
 
+static int vtd_hpasid_find_by_guest(IntelIOMMUState *s, uint32_t pasid);
+
 /**
  * Caller should hold iommu_lock.
  */
@@ -2506,7 +2508,7 @@ static int vtd_bind_guest_pasid(VTDPASIDAddressSpace *vtd_pasid_as,
     int devfn, pasid;
     VTDHostIOMMUContext *vtd_dev_icx;
     HostIOMMUContext *iommu_ctx;
-    int ret = -1, rid2pasid;
+    int ret = -1, rid2pasid, hpasid;
 
     assert(vtd_pasid_as);
 
@@ -2552,6 +2554,11 @@ static int vtd_bind_guest_pasid(VTDPASIDAddressSpace *vtd_pasid_as,
         op = VTD_PASID_UNBIND;
     }
 
+    hpasid = vtd_hpasid_find_by_guest(s, pasid);
+    if (hpasid < 0) {
+        error_report("%s, invalid bind, pasid: %d!\n", __func__, pasid);
+    }
+
     switch (op) {
     case VTD_PASID_BIND:
     {
@@ -2564,7 +2571,7 @@ static int vtd_bind_guest_pasid(VTDPASIDAddressSpace *vtd_pasid_as,
         g_bind_data->format = IOMMU_PASID_FORMAT_INTEL_VTD;
         g_bind_data->gpgd = vtd_pe_get_flpt_base(pe);
         g_bind_data->addr_width = vtd_pe_get_fl_aw(pe);
-        g_bind_data->hpasid = pasid;
+        g_bind_data->hpasid = hpasid;
         g_bind_data->gpasid = pasid;
         g_bind_data->flags |= IOMMU_SVA_GPASID_VAL;
         if (pasid == rid2pasid)
@@ -2605,7 +2612,8 @@ static int vtd_bind_guest_pasid(VTDPASIDAddressSpace *vtd_pasid_as,
         g_unbind_data->argsz = sizeof(*g_unbind_data);
         g_unbind_data->version = IOMMU_GPASID_BIND_VERSION_1;
         g_unbind_data->format = IOMMU_PASID_FORMAT_INTEL_VTD;
-        g_unbind_data->hpasid = pasid;
+        g_unbind_data->hpasid = hpasid;
+        g_unbind_data->gpasid = pasid;
         if (pasid == rid2pasid)
             g_unbind_data->flags |= IOMMU_SVA_HPASID_DEF;
         if (vtd_pasid_as->bound_to_host) {
@@ -4347,7 +4355,75 @@ static void vtd_handle_iectl_write(IntelIOMMUState *s)
     }
 }
 
-static int vtd_request_pasid_alloc(IntelIOMMUState *s, uint32_t *pasid)
+/* Must be called with IOMMU lock held */
+static VTDPASIDStoreEntry *vtd_pasid_find_by_idx(IntelIOMMUState *s,
+                                                 uint32_t idx)
+{
+    VTDPASIDStoreEntry *entry;
+
+    idx &= 0xfffff;
+    entry = &s->vtd_pasid[idx >> 10][idx & 0x3ff];
+
+    return entry->allocated ? entry : NULL;
+}
+
+/* Must be called with IOMMU lock held */
+static int vtd_hpasid_find_by_guest(IntelIOMMUState *s, uint32_t pasid)
+{
+    VTDPASIDStoreEntry *entry;
+    int ret;
+
+    /* Identical g/h pasid */
+    if (!s->non_identical_pasid) {
+        return pasid;
+    }
+
+    entry = vtd_pasid_find_by_idx(s, pasid);
+    if (entry) {
+        ret = entry->hpasid;
+    } else {
+        ret = -ENODEV;
+    }
+    return ret;
+}
+
+/* Must be called with IOMMU lock held */
+static void vtd_pasid_free_idx(IntelIOMMUState *s, uint32_t idx)
+{
+    VTDPASIDStoreEntry *entry;
+
+    entry = vtd_pasid_find_by_idx(s, idx);
+    if (entry) {
+        memset(entry, 0x0, sizeof(*entry));
+    }
+}
+
+/* Must be called with IOMMU lock held */
+static VTDPASIDStoreEntry *vtd_pasid_alloc_idx(IntelIOMMUState *s)
+{
+    uint32_t idx;
+    VTDPASIDStoreEntry *entry;
+
+    idx = s->next_idx;
+    while (vtd_pasid_find_by_idx(s, idx)) {
+        if (idx == VTD_HPASID_MAX) {
+            idx = VTD_HPASID_MIN;
+        } else {
+            idx = (idx + 1) & VTD_HPASID_MAX;
+        }
+        if (idx == s->next_idx) {
+            return NULL;
+        }
+    }
+
+    entry = &s->vtd_pasid[idx >> 10][idx & 0x3ff];
+    entry->gpasid = idx;
+    entry->allocated = true;
+    s->next_idx = (idx + 1) & VTD_HPASID_MAX;
+    return entry;
+}
+
+static int __vtd_alloc_host_pasid(IntelIOMMUState *s)
 {
     struct ioasid_alloc_request req;
     int ret;
@@ -4362,18 +4438,43 @@ static int vtd_request_pasid_alloc(IntelIOMMUState *s, uint32_t *pasid)
         return -1;
     }
 
-    vtd_iommu_lock(s);
     ret = ioctl(s->ioasid_fd, IOASID_REQUEST_ALLOC, &req);
     if (ret < 0) {
         error_report("%s: alloc failed %d", __func__, ret);
     }
     VTD_DEBUG("%s, allocated pasid: %d\n", __func__, ret);
+    return ret;
+}
+
+static int vtd_request_pasid_alloc(IntelIOMMUState *s, uint32_t *pasid)
+{
+    int ret;
+    VTDPASIDStoreEntry *entry = NULL;
+
+    vtd_iommu_lock(s);
+    ret = __vtd_alloc_host_pasid(s);
+    if (ret < 0 || !s->non_identical_pasid) {
+        if (ret > 0) {
+            VTD_DEBUG("Allocated identical PASID g/h: %u/%u\n", ret, ret);
+        }
+        goto out;
+    }
+
+    entry = vtd_pasid_alloc_idx(s);
+    if (entry) {
+        entry->hpasid = ret;
+        ret = entry->gpasid;
+        VTD_DEBUG("Alloc PASID g/h: %u/%u\n", entry->gpasid, entry->hpasid);
+    } else {
+        ret = -ENOSPC;
+    }
+out:
     vtd_iommu_unlock(s);
     *pasid = ret;
     return (ret < 0) ? ret : 0;
 }
 
-static int vtd_request_pasid_free(IntelIOMMUState *s, uint32_t pasid)
+static int __vtd_free_host_pasid(IntelIOMMUState *s, uint32_t pasid)
 {
     int ret = -1;
 
@@ -4382,11 +4483,41 @@ static int vtd_request_pasid_free(IntelIOMMUState *s, uint32_t pasid)
         return -1;
     }
 
-    vtd_iommu_lock(s);
     ret = ioctl(s->ioasid_fd, IOASID_REQUEST_FREE, &pasid);
     if (ret < 0) {
         error_report("%s: free failed (%m)", __func__);
     }
+
+    return ret;
+}
+
+static int vtd_request_pasid_free(IntelIOMMUState *s, uint32_t pasid)
+{
+    int ret;
+    VTDPASIDStoreEntry *entry = NULL;
+
+    vtd_iommu_lock(s);
+
+    /* Identical g/h pasid */
+    if (!s->non_identical_pasid) {
+        ret = __vtd_free_host_pasid(s, pasid);
+        if (!ret) {
+            VTD_DEBUG("Freed identical PASID g/h: %u/%u\n", pasid, pasid);
+        }
+        goto out;
+    }
+
+    entry = vtd_pasid_find_by_idx(s, pasid);
+    if (!entry) {
+        ret = -ENODEV;
+        goto out;
+    }
+    ret = __vtd_free_host_pasid(s, entry->hpasid);
+    if (!ret) {
+        VTD_DEBUG("Free PASID g/h: %u/%u\n", pasid, entry->hpasid);
+        vtd_pasid_free_idx(s, pasid);
+    }
+out:
     vtd_iommu_unlock(s);
 
     return ret;
@@ -5121,6 +5252,7 @@ static Property vtd_properties[] = {
     DEFINE_PROP_BOOL("caching-mode", IntelIOMMUState, caching_mode, FALSE),
     DEFINE_PROP_STRING("x-scalable-mode", IntelIOMMUState, scalable_mode_str),
     DEFINE_PROP_BOOL("dma-drain", IntelIOMMUState, dma_drain, true),
+    DEFINE_PROP_BOOL("pasid-migration", IntelIOMMUState, non_identical_pasid, false),
     DEFINE_PROP_END_OF_LIST(),
 };
 
@@ -6161,6 +6293,11 @@ static bool vtd_decide_config(IntelIOMMUState *s, Error **errp)
         s->scalable_modern = false;
     }
 
+    if (s->non_identical_pasid && !s->scalable_modern) {
+        error_setg(errp, "Non identical PASID only be available for scalable modern mode");
+        return false;
+    }
+
     return true;
 }
 
@@ -6255,7 +6392,20 @@ static void vtd_realize(DeviceState *dev, Error **errp)
     s->vtd_pasid_as = g_hash_table_new_full(vtd_pasid_as_key_hash,
                                             vtd_pasid_as_key_equal,
                                             g_free, g_free);
+    s->next_idx = 0;;
     vtd_init(s);
+    if (likely(!(s->ecap & VTD_ECAP_RPS))) {
+        VTDPASIDStoreEntry *entry;
+
+        vtd_iommu_lock(s);
+        entry = vtd_pasid_alloc_idx(s);
+        if (entry && entry->gpasid == 0) {
+            entry->hpasid = 0;
+        } else {
+            error_setg(errp, "Failed to reserve gPASID 0 for scalable mode");
+        }
+        vtd_iommu_unlock(s);
+    }
     sysbus_mmio_map(SYS_BUS_DEVICE(s), 0, Q35_HOST_BRIDGE_IOMMU_ADDR);
     pci_setup_iommu(bus, &vtd_iommu_ops, dev);
     /* Pseudo address space under root PCI bus. */
