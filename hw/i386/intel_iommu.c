@@ -1996,7 +1996,7 @@ static int vtd_bind_guest_pasid(IntelIOMMUState *s, VTDBus *vtd_bus,
     HostIOMMUContext *iommu_ctx;
     int ret = -1;
 
-    if (pasid < VTD_HPASID_MIN) {
+    if (pasid < VTD_HPASID_MIN && pasid != 0) {
         /*
          * If pasid < VTD_HPASID_MIN, this pasid is not allocated
          * from host. No need to pass down the changes on it to host.
@@ -2032,6 +2032,8 @@ static int vtd_bind_guest_pasid(IntelIOMMUState *s, VTDBus *vtd_bus,
         g_bind_data->hpasid = pasid;
         g_bind_data->gpasid = pasid;
         g_bind_data->flags |= IOMMU_SVA_GPASID_VAL;
+        if (!pasid)
+            g_bind_data->flags |= IOMMU_SVA_HPASID_DEF;
         g_bind_data->vendor.vtd.flags =
                              (VTD_SM_PASID_ENTRY_SRE_BIT(pe->val[2]) ?
                                             IOMMU_SVA_VTD_GPASID_SRE : 0)
@@ -2061,6 +2063,8 @@ static int vtd_bind_guest_pasid(IntelIOMMUState *s, VTDBus *vtd_bus,
         g_unbind_data->version = IOMMU_GPASID_BIND_VERSION_1;
         g_unbind_data->format = IOMMU_PASID_FORMAT_INTEL_VTD;
         g_unbind_data->hpasid = pasid;
+        if (!pasid)
+            g_unbind_data->flags |= IOMMU_SVA_HPASID_DEF;
         ret = host_iommu_ctx_unbind_stage1_pgtbl(iommu_ctx, g_unbind_data);
         g_free(g_unbind_data);
         break;
