@@ -1985,6 +1985,34 @@ static void vtd_context_global_invalidate(IntelIOMMUState *s)
     vtd_pasid_cache_sync(s, &pc_info);
 }
 
+static int vtd_dev_get_rid2pasid(IntelIOMMUState *s,
+                                 uint8_t bus_num, uint8_t devfn)
+{
+    VTDContextEntry ce;
+    int ret, pasid = 0;
+
+    /*
+     * Currently, ECAP.RPS bit is likely to be reported as "Clear".
+     * And per VT-d 3.1 spec, it will use PASID #0 as RID2PASID when
+     * RPS bit is reported as "Clear".
+     */
+    if (likely(!(s->ecap & VTD_ECAP_RPS))) {
+        return 0;
+    }
+
+    /*
+     * In future, to improve performance, could try to fetch context
+     * entry from cache firstly.
+     */
+    ret = vtd_dev_to_context_entry(s, bus_num, devfn, &ce);
+    if (ret) {
+        return ret;
+    }
+
+    pasid = VTD_CE_GET_RID2PASID(&ce);
+    return pasid;
+}
+
 /**
  * Caller should hold iommu_lock.
  */
@@ -1994,9 +2022,15 @@ static int vtd_bind_guest_pasid(IntelIOMMUState *s, VTDBus *vtd_bus,
 {
     VTDHostIOMMUContext *vtd_dev_icx;
     HostIOMMUContext *iommu_ctx;
-    int ret = -1;
+    int ret = -1, rid2pasid;
 
-    if (pasid < VTD_HPASID_MIN && pasid != 0) {
+    rid2pasid = vtd_dev_get_rid2pasid(s, pci_bus_num(vtd_bus->bus), devfn);
+    if (unlikely(rid2pasid < 0)) {
+        /* If unable to get rid2pasid form guest memroy, use PASID #0 */
+        rid2pasid = 0;
+    }
+
+    if (pasid < VTD_HPASID_MIN && pasid != rid2pasid) {
         /*
          * If pasid < VTD_HPASID_MIN, this pasid is not allocated
          * from host. No need to pass down the changes on it to host.
@@ -2032,7 +2066,7 @@ static int vtd_bind_guest_pasid(IntelIOMMUState *s, VTDBus *vtd_bus,
         g_bind_data->hpasid = pasid;
         g_bind_data->gpasid = pasid;
         g_bind_data->flags |= IOMMU_SVA_GPASID_VAL;
-        if (!pasid)
+        if (pasid == rid2pasid)
             g_bind_data->flags |= IOMMU_SVA_HPASID_DEF;
         g_bind_data->vendor.vtd.flags =
                              (VTD_SM_PASID_ENTRY_SRE_BIT(pe->val[2]) ?
@@ -2063,7 +2097,7 @@ static int vtd_bind_guest_pasid(IntelIOMMUState *s, VTDBus *vtd_bus,
         g_unbind_data->version = IOMMU_GPASID_BIND_VERSION_1;
         g_unbind_data->format = IOMMU_PASID_FORMAT_INTEL_VTD;
         g_unbind_data->hpasid = pasid;
-        if (!pasid)
+        if (pasid == rid2pasid)
             g_unbind_data->flags |= IOMMU_SVA_HPASID_DEF;
         ret = host_iommu_ctx_unbind_stage1_pgtbl(iommu_ctx, g_unbind_data);
         g_free(g_unbind_data);
