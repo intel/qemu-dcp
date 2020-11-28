@@ -5257,6 +5257,7 @@ static void vtd_init(IntelIOMMUState *s)
                    VTD_ECAP_PSS(VTD_PASID_SS) | VTD_ECAP_VCS  | VTD_ECAP_PRS;
         if (s->aw_bits == VTD_HOST_AW_48BIT) {
             s->ecap |= VTD_ECAP_FLTS;
+            s->cap |= VTD_CAP_FL1GP;
         }
         s->vccap |= VTD_VCCAP_PAS;
     }
