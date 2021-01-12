@@ -66,6 +66,7 @@ struct X86MachineState {
     SgxEPCList *sgx_epc_list;
     bool eoi_intercept_unsupported;
     bool smi_unsupported;
+    bool init_sipi_unsupported;
 
     OnOffAuto smm;
     OnOffAuto acpi;
@@ -145,9 +146,11 @@ void gsi_handler(void *opaque, int n, int level);
 void sgx_epc_reset(void *opaque);
 void ioapic_init_gsi(GSIState *gsi_state, const char *parent_name,
                      bool eoi_intercept_unsupported,
-                     bool smi_unsupported);
+                     bool smi_unsupported,
+                     bool init_sipi_unsupported);
 DeviceState *ioapic_init_secondary(GSIState *gsi_state,
                                    bool eoi_intercept_unsupported,
-                                   bool smi_unsupported);
+                                   bool smi_unsupported,
+                                   bool init_sipi_unsupported);
 
 #endif
