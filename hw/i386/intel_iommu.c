@@ -2572,6 +2572,8 @@ static int vtd_bind_guest_pasid(VTDPASIDAddressSpace *vtd_pasid_as,
         g_bind_data->vendor.vtd.flags =
                              (VTD_SM_PASID_ENTRY_SRE_BIT(pe->val[2]) ?
                                             IOMMU_SVA_VTD_GPASID_SRE : 0)
+                           | (VTD_SM_PASID_ENTRY_WPE_BIT(pe->val[2]) ?
+                                            IOMMU_SVA_VTD_GPASID_WPE : 0)
                            | (VTD_SM_PASID_ENTRY_EAFE_BIT(pe->val[2]) ?
                                             IOMMU_SVA_VTD_GPASID_EAFE : 0)
                            | (VTD_SM_PASID_ENTRY_PCD_BIT(pe->val[1]) ?
