@@ -2016,13 +2016,22 @@ static int vtd_dev_get_rid2pasid(IntelIOMMUState *s,
 /**
  * Caller should hold iommu_lock.
  */
-static int vtd_bind_guest_pasid(IntelIOMMUState *s, VTDBus *vtd_bus,
-                                int devfn, int pasid, VTDPASIDEntry *pe,
-                                VTDPASIDOp op)
+static int vtd_bind_guest_pasid(VTDPASIDAddressSpace *vtd_pasid_as,
+                                VTDPASIDEntry *pe, VTDPASIDOp op)
 {
+    IntelIOMMUState *s;
+    VTDBus *vtd_bus;
+    int devfn, pasid;
     VTDHostIOMMUContext *vtd_dev_icx;
     HostIOMMUContext *iommu_ctx;
     int ret = -1, rid2pasid;
+
+    assert(vtd_pasid_as);
+
+    s = vtd_pasid_as->iommu_state;
+    vtd_bus = vtd_pasid_as->vtd_bus;
+    devfn = vtd_pasid_as->devfn;
+    pasid = vtd_pasid_as->pasid;
 
     rid2pasid = vtd_dev_get_rid2pasid(s, pci_bus_num(vtd_bus->bus), devfn);
     if (unlikely(rid2pasid < 0)) {
@@ -2769,10 +2778,7 @@ static int vtd_fill_pe_in_cache(IntelIOMMUState *s,
     }
 
     pc_entry->pasid_entry = *pe;
-    return vtd_bind_guest_pasid(s, vtd_pasid_as->vtd_bus,
-                                vtd_pasid_as->devfn,
-                                vtd_pasid_as->pasid,
-                                pe, VTD_PASID_BIND);
+    return vtd_bind_guest_pasid(vtd_pasid_as, pe, VTD_PASID_BIND);
 }
 
 /**
@@ -2857,8 +2863,7 @@ remove:
      * - when pasid-base-iotlb(piotlb) infrastructure is ready,
      *   should invalidate QEMU piotlb togehter with this change.
      */
-    if (vtd_bind_guest_pasid(s, vtd_bus, devfn,
-                         pasid, NULL, VTD_PASID_UNBIND)) {
+    if (vtd_bind_guest_pasid(vtd_pasid_as, &pe, VTD_PASID_UNBIND)) {
         pasid_cache_info_set_error(pc_info);
     }
 
