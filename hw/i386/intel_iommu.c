@@ -2569,6 +2569,7 @@ static int vtd_bind_guest_pasid(VTDPASIDAddressSpace *vtd_pasid_as,
         g_bind_data->argsz = sizeof(*g_bind_data);
         g_bind_data->version = IOMMU_GPASID_BIND_VERSION_1;
         g_bind_data->format = IOMMU_PASID_FORMAT_INTEL_VTD;
+        g_bind_data->flags = IOMMU_SVA_GPASID_VAL;
         g_bind_data->gpgd = vtd_pe_get_flpt_base(pe);
         g_bind_data->addr_width = vtd_pe_get_fl_aw(pe);
         g_bind_data->hpasid = hpasid;
@@ -4096,9 +4097,23 @@ static bool vtd_process_page_group_response(IntelIOMMUState *s,
 {
     struct iommu_page_response pg_resp;
     VTDPRQEntry *vtd_prq, *tmp;
+    int hpasid;
 
     VTD_DEBUG("%s: page response: hi=0x%lx lo=0x%lx\n"
            , __func__, inv_desc->val[1], inv_desc->val[0]);
+    /* Today only support page request with PASID, so the same with response */
+    if (!inv_desc->resp.pasid_present) {
+        return true;
+    }
+
+    vtd_iommu_lock(s);
+    hpasid = vtd_hpasid_find_by_guest(s, inv_desc->resp.pasid);
+    vtd_iommu_unlock(s);
+    if (hpasid < 0) {
+        VTD_DEBUG("%s, gpasid: %d not found!\n", __func__, inv_desc->resp.pasid);
+        return true;
+    }
+
     /*
      * REVISIT: private data from the guest is not sent back with
      * the page response in that host is tracking the private and
@@ -4107,11 +4122,10 @@ static bool vtd_process_page_group_response(IntelIOMMUState *s,
      */
     pg_resp.argsz = sizeof(pg_resp);
     pg_resp.version = IOMMU_PAGE_RESP_VERSION_1;
-    pg_resp.pasid = inv_desc->resp.pasid;
     pg_resp.code = inv_desc->resp.resp_code;
-    pg_resp.flags = inv_desc->resp.pasid_present ?
-                                 IOMMU_PAGE_RESP_PASID_VALID : 0;
     pg_resp.grpid = inv_desc->resp.grpid;
+    pg_resp.pasid = hpasid;
+    pg_resp.flags = IOMMU_PAGE_RESP_PASID_VALID;
     VTD_DEBUG("%s, PASID %d pg_resp flags %x\n", __func__, pg_resp.pasid, pg_resp.flags);
 
     /*
@@ -4385,6 +4399,29 @@ static int vtd_hpasid_find_by_guest(IntelIOMMUState *s, uint32_t pasid)
         ret = -ENODEV;
     }
     return ret;
+}
+
+/* Must be called with IOMMU lock held */
+static int vtd_gpasid_find_by_host(IntelIOMMUState *s, uint32_t pasid)
+{
+    int j, k;
+
+    /* Identical g/h pasid */
+    if (!s->non_identical_pasid) {
+        return pasid;
+    }
+
+    for (j = 0; j < 1024; j++) {
+        for (k = 0; k < 1024; k++) {
+            VTDPASIDStoreEntry *entry = &s->vtd_pasid[j][k];
+
+            if (entry->allocated && entry->hpasid == pasid) {
+                return entry->gpasid;
+            }
+        }
+    }
+
+    return -ENODEV;
 }
 
 /* Must be called with IOMMU lock held */
@@ -5813,15 +5850,23 @@ static int vtd_dev_report_iommu_fault(PCIBus *bus, void *opaque,
         ret = 0;
         break;
     case IOMMU_FAULT_PAGE_REQ:
+        /* Only support page request with PASID */
+        if (!(IOMMU_FAULT_PAGE_REQUEST_PASID_VALID & fault->prm.flags)) {
+           ret = -ENOTTY;
+           break;
+        }
         prq.type = 0x1; /* VT-d spec 3.0 defines it as 0x1*/
-        prq.pasid_present = (IOMMU_FAULT_PAGE_REQUEST_PASID_VALID
-                                               & fault->prm.flags) ? 1 : 0;
+        prq.pasid_present = 1;
         prq.priv_data_present =(IOMMU_FAULT_PAGE_REQUEST_PRIV_DATA
                                                & fault->prm.flags) ? 1 : 0;
         prq.rsvd = 0x0;
         prq.rid = vtd_make_source_id(bus_num, devfn);
-        prq.pasid = (IOMMU_FAULT_PAGE_REQUEST_PASID_VALID
-                                 & fault->prm.flags) ? fault->prm.pasid : 0;
+        ret = vtd_gpasid_find_by_host(s, fault->prm.pasid);
+        if (ret < 0) {
+            VTD_DEBUG("%s failed to find gpasid for hpasid: %d\n", __func__, fault->prm.flags);
+            break;
+        }
+        prq.pasid = ret;
         prq.exe_req = (fault->prm.perm & IOMMU_FAULT_PERM_EXEC) ? 1 : 0;
         prq.pm_req = (fault->prm.perm & IOMMU_FAULT_PERM_PRIV) ? 1 : 0;
         prq.rsvd2 = 0x0;
