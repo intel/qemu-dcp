@@ -546,6 +546,7 @@ typedef enum X86Seg {
 #define XSTATE_PKRU_BIT                 9
 #define XSTATE_CET_U_BIT                11
 #define XSTATE_CET_S_BIT                12
+#define XSTATE_ARCH_LBR                 15
 
 #define XSTATE_FP_MASK                  (1ULL << XSTATE_FP_BIT)
 #define XSTATE_SSE_MASK                 (1ULL << XSTATE_SSE_BIT)
@@ -558,6 +559,7 @@ typedef enum X86Seg {
 #define XSTATE_PKRU_MASK                (1ULL << XSTATE_PKRU_BIT)
 #define XSTATE_CET_U_MASK               (1ULL << XSTATE_CET_U_BIT)
 #define XSTATE_CET_S_MASK               (1ULL << XSTATE_CET_S_BIT)
+#define XSTATE_ARCH_LBR_MASK            (1ULL << XSTATE_ARCH_LBR)
 
 /* CPUID feature bits available in XCR0 */
 #define CPUID_XSTATE_XCR0_MASK  (XSTATE_FP_MASK | XSTATE_SSE_MASK | \
@@ -860,6 +862,8 @@ typedef uint64_t FeatureWordArray[FEATURE_WORDS];
 #define CPUID_7_0_EDX_SERIALIZE         (1U << 14)
 /* TSX Suspend Load Address Tracking instruction */
 #define CPUID_7_0_EDX_TSX_LDTRK         (1U << 16)
+/* Architectural LBRs */
+#define CPUID_7_0_EDX_ARCH_LBR          (1U << 19)
 /* CET IBT feature */
 #define CPUID_7_0_EDX_CET_IBT           (1U << 20)
 /* AVX512_FP16 instruction */
@@ -1380,6 +1384,24 @@ typedef struct XSavesCETS {
     uint64_t pl2_ssp;
 } XSavesCETS;
 
+struct lbr_entry {
+       uint64_t                lbr_from;
+       uint64_t                lbr_to;
+       uint64_t                lbr_info;
+};
+
+#define ARCH_LBR_NR_ENTRIES            32
+
+/* Ext. save area 19: Supervisor mode Arch LBR state */
+typedef struct XSavesArchLBR {
+    uint64_t lbr_ctl;
+    uint64_t lbr_depth;
+    uint64_t ler_from;
+    uint64_t ler_to;
+    uint64_t ler_info;
+    struct lbr_entry           lbr_entry[ARCH_LBR_NR_ENTRIES];
+} XSavesArchLBR;
+
 QEMU_BUILD_BUG_ON(sizeof(XSaveAVX) != 0x100);
 QEMU_BUILD_BUG_ON(sizeof(XSaveBNDREG) != 0x40);
 QEMU_BUILD_BUG_ON(sizeof(XSaveBNDCSR) != 0x40);
@@ -1389,13 +1411,14 @@ QEMU_BUILD_BUG_ON(sizeof(XSaveHi16_ZMM) != 0x400);
 QEMU_BUILD_BUG_ON(sizeof(XSavePKRU) != 0x8);
 QEMU_BUILD_BUG_ON(sizeof(XSavesCETU) != 0x10);
 QEMU_BUILD_BUG_ON(sizeof(XSavesCETS) != 0x18);
+QEMU_BUILD_BUG_ON(sizeof(XSavesArchLBR) != 0x328);
 
 typedef struct ExtSaveArea {
     uint32_t feature, bits;
     uint32_t offset, size;
 } ExtSaveArea;
 
-#define XSAVE_STATE_AREA_COUNT (XSTATE_CET_S_BIT + 1)
+#define XSAVE_STATE_AREA_COUNT (XSTATE_ARCH_LBR + 1)
 
 extern ExtSaveArea x86_ext_save_areas[XSAVE_STATE_AREA_COUNT];
 

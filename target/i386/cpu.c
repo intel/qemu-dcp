@@ -842,7 +842,7 @@ FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
             "fsrm", NULL, NULL, NULL,
             "avx512-vp2intersect", NULL, "md-clear", NULL,
             NULL, NULL, "serialize", NULL,
-            "tsx-ldtrk", NULL, NULL /* pconfig */, NULL,
+            "tsx-ldtrk", NULL, NULL /* pconfig */, "arch-lbr",
             "ibt", NULL, NULL, "avx512-fp16",
             NULL, NULL, "spec-ctrl", "stibp",
             NULL, "arch-capabilities", "core-capability", "ssbd",
@@ -1398,7 +1398,7 @@ static const X86RegisterInfo32 x86_reg_info_32[CPU_NB_REGS32] = {
 #undef REGISTER
 
 /* CPUID feature bits available in XSS */
-#define CPUID_XSTATE_XSS_MASK    (XSTATE_CET_U_MASK)
+#define CPUID_XSTATE_XSS_MASK    (XSTATE_CET_U_MASK | XSTATE_ARCH_LBR_MASK)
 
 ExtSaveArea x86_ext_save_areas[XSAVE_STATE_AREA_COUNT] = {
     [XSTATE_FP_BIT] = {
@@ -1445,6 +1445,10 @@ ExtSaveArea x86_ext_save_areas[XSAVE_STATE_AREA_COUNT] = {
             .feature = FEAT_7_0_ECX, .bits = CPUID_7_0_ECX_CET_SHSTK,
             .offset = 0,
             .size = sizeof(XSavesCETS) },
+    [XSTATE_ARCH_LBR] = {
+            .feature = FEAT_7_0_EDX, .bits = CPUID_7_0_EDX_ARCH_LBR,
+            .offset = 0 /*supervisor mode component, offset = 0 */,
+            .size = sizeof(XSavesArchLBR) },
 };
 
 static uint32_t xsave_area_size(uint64_t mask, bool compacted)
@@ -5478,6 +5482,12 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
         assert(!(*eax & ~0x1f));
         *ebx &= 0xffff; /* The count doesn't need to be reliable. */
         break;
+    case 0x1C:
+        *eax = kvm_arch_get_supported_cpuid(cs->kvm_state, 0x1C, 0, R_EAX);
+        *ebx = kvm_arch_get_supported_cpuid(cs->kvm_state, 0x1C, 0, R_EBX);
+        *ecx = kvm_arch_get_supported_cpuid(cs->kvm_state, 0x1C, 0, R_ECX);
+        *edx = 0;
+        break;
     case 0x1F:
         /* V2 Extended Topology Enumeration Leaf */
         if (env->nr_dies < 2) {
@@ -5540,6 +5550,19 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
             *ebx = xsave_area_size(xstate, true);
             *ecx = env->features[FEAT_XSAVE_XSS_LO];
             *edx = env->features[FEAT_XSAVE_XSS_HI];
+            if (kvm_enabled() && cpu->enable_pmu &&
+                (env->features[FEAT_7_0_EDX] & CPUID_7_0_EDX_ARCH_LBR) &&
+                (*eax & CPUID_XSAVE_XSAVES)) {
+                *ecx |= XSTATE_ARCH_LBR_MASK;
+            } else {
+                *ecx &= ~XSTATE_ARCH_LBR_MASK;
+            }
+        } else if (count == 0xf && kvm_enabled() && cpu->enable_pmu &&
+                   (env->features[FEAT_7_0_EDX] & CPUID_7_0_EDX_ARCH_LBR)) {
+            *eax = kvm_arch_get_supported_cpuid(cs->kvm_state, 0xD, 0xf, R_EAX);
+            *ebx = kvm_arch_get_supported_cpuid(cs->kvm_state, 0xD, 0xf, R_EBX);
+            *ecx = kvm_arch_get_supported_cpuid(cs->kvm_state, 0xD, 0xf, R_ECX);
+            *edx = kvm_arch_get_supported_cpuid(cs->kvm_state, 0xD, 0xf, R_EDX);
         } else if (count < ARRAY_SIZE(x86_ext_save_areas)) {
             const ExtSaveArea *esa = &x86_ext_save_areas[count];
 
