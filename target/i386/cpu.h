@@ -1456,6 +1456,16 @@ typedef struct XSavesArchLBR {
     struct lbr_entry           lbr_entry[ARCH_LBR_NR_ENTRIES];
 } XSavesArchLBR;
 
+/* Ext. save area 17: AMX XTILECFG state */
+typedef struct XSaveXTILE_CFG {
+    uint8_t xtilecfg[64];
+} XSaveXTILE_CFG;
+
+/* Ext. save area 18: AMX XTILEDATA state */
+typedef struct XSaveXTILE_DATA {
+    uint8_t xtiledata[8][1024];
+} XSaveXTILE_DATA;
+
 QEMU_BUILD_BUG_ON(sizeof(XSaveAVX) != 0x100);
 QEMU_BUILD_BUG_ON(sizeof(XSaveBNDREG) != 0x40);
 QEMU_BUILD_BUG_ON(sizeof(XSaveBNDCSR) != 0x40);
@@ -1466,6 +1476,8 @@ QEMU_BUILD_BUG_ON(sizeof(XSavePKRU) != 0x8);
 QEMU_BUILD_BUG_ON(sizeof(XSavesCETU) != 0x10);
 QEMU_BUILD_BUG_ON(sizeof(XSavesCETS) != 0x18);
 QEMU_BUILD_BUG_ON(sizeof(XSavesArchLBR) != 0x328);
+QEMU_BUILD_BUG_ON(sizeof(XSaveXTILE_CFG) != 0x40);
+QEMU_BUILD_BUG_ON(sizeof(XSaveXTILE_DATA) != 0x2000);
 
 typedef struct ExtSaveArea {
     uint32_t feature, bits;
@@ -1473,7 +1485,7 @@ typedef struct ExtSaveArea {
     uint32_t need_align, support_xfd;
 } ExtSaveArea;
 
-#define XSAVE_STATE_AREA_COUNT (XSTATE_ARCH_LBR + 1)
+#define XSAVE_STATE_AREA_COUNT (XSTATE_XTILE_DATA_BIT + 1)
 
 extern ExtSaveArea x86_ext_save_areas[XSAVE_STATE_AREA_COUNT];
 
