@@ -936,6 +936,7 @@ bool migration_is_setup_or_active(int state)
     case MIGRATION_STATUS_DEVICE:
     case MIGRATION_STATUS_WAIT_UNPLUG:
     case MIGRATION_STATUS_COLO:
+    case MIGRATION_STATUS_COMPLETING:
         return true;
 
     default:
