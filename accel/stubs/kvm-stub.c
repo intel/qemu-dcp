@@ -147,4 +147,20 @@ bool kvm_arm_supports_user_irq(void)
 {
     return false;
 }
+
+bool kvm_dirty_ring_enabled(void)
+{
+    return false;
+}
+
+void kvm_setup_set_memory_region_debug_ops(struct KVMState *s,
+                                           set_memory_region_debug_ops new_ops)
+{
+
+}
+
+void kvm_set_memory_region_debug_ops(void *handle, MemoryRegion *mr)
+{
+
+}
 #endif
