@@ -5698,7 +5698,7 @@ static int vtd_dev_report_iommu_fault(PCIBus *bus, void *opaque,
         prq.lpig = (IOMMU_FAULT_PAGE_REQUEST_LAST_PAGE
                                                 & fault->prm.flags) ? 1 : 0;
         prq.prg_index = fault->prm.grpid;
-        prq.addr = fault->prm.addr; /* addr here is a pfn per intel-iommu driver */
+        prq.addr = fault->prm.addr >> VTD_PAGE_SHIFT; /* addr here is not pfn per intel-iommu driver (5.12) */
         prq.priv_data[0] = (IOMMU_FAULT_PAGE_REQUEST_PRIV_DATA
                     & fault->prm.flags) ? fault->prm.private_data[0] : 0x0;
         prq.priv_data[1] = (IOMMU_FAULT_PAGE_REQUEST_PRIV_DATA
