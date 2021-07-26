@@ -782,7 +782,7 @@ static void vfio_migration_state_notifier(Notifier *notifier, void *data)
         vfio_bars_set_trap(vbasedev, true);
         qemu_mutex_unlock_iothread();
 
-        ret = vfio_migration_set_state(vbasedev, 0, VFIO_DEVICE_STATE_SAVING);
+        ret = vfio_migration_set_state(vbasedev, ~VFIO_DEVICE_STATE_RUNNING, VFIO_DEVICE_STATE_SAVING);
         if (ret) {
             error_report("%s: Failed to set state STOPPED", vbasedev->name);
         }
