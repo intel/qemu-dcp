@@ -377,6 +377,12 @@ struct kvm_xsave {
 	__u32 region[1024];
 };
 
+struct kvm_xsave2 {
+        __u32 flag;
+        __u32 size;
+        __u8 state[0];
+};
+
 #define KVM_MAX_XCRS	16
 
 struct kvm_xcr {
