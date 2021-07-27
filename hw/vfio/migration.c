@@ -776,15 +776,18 @@ static void vfio_migration_state_notifier(Notifier *notifier, void *data)
             error_report("%s: Failed to set state RUNNING", vbasedev->name);
         }
         break;
-    case MIGRATION_STATUS_COMPLETING:
-        /* switch to slow path before stopping device */
-        qemu_mutex_lock_iothread(); // needs to hold this lock since the notifier chain caller doesn't hold it
-        vfio_bars_set_trap(vbasedev, true);
-        qemu_mutex_unlock_iothread();
+    case MIGRATION_STATUS_ACTIVE:
+        if (qatomic_read(&s->migration_pre_completed)) {
+            info_report(":%s: Switch to slow path and toggle deivce state to stop-saving\n", vbasedev->name);
+            /* switch to slow path before stopping device */
+            qemu_mutex_lock_iothread(); // needs to hold this lock since the notifier chain caller doesn't hold it
+            vfio_bars_set_trap(vbasedev, true);
+            qemu_mutex_unlock_iothread();
 
-        ret = vfio_migration_set_state(vbasedev, ~VFIO_DEVICE_STATE_RUNNING, VFIO_DEVICE_STATE_SAVING);
-        if (ret) {
-            error_report("%s: Failed to set state STOPPED", vbasedev->name);
+            ret = vfio_migration_set_state(vbasedev, ~VFIO_DEVICE_STATE_RUNNING, VFIO_DEVICE_STATE_SAVING);
+            if (ret) {
+                error_report("%s: Failed to set state STOPPED", vbasedev->name);
+            }
         }
         break;
     }
