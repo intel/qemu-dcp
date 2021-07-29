@@ -5483,10 +5483,17 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
         *ebx &= 0xffff; /* The count doesn't need to be reliable. */
         break;
     case 0x1C:
-        *eax = kvm_arch_get_supported_cpuid(cs->kvm_state, 0x1C, 0, R_EAX);
-        *ebx = kvm_arch_get_supported_cpuid(cs->kvm_state, 0x1C, 0, R_EBX);
-        *ecx = kvm_arch_get_supported_cpuid(cs->kvm_state, 0x1C, 0, R_ECX);
-        *edx = 0;
+        if (kvm_enabled()) {
+            *eax = kvm_arch_get_supported_cpuid(cs->kvm_state, 0x1C, 0, R_EAX);
+            *ebx = kvm_arch_get_supported_cpuid(cs->kvm_state, 0x1C, 0, R_EBX);
+            *ecx = kvm_arch_get_supported_cpuid(cs->kvm_state, 0x1C, 0, R_ECX);
+            *edx = 0;
+        } else {
+            *eax = 0;
+            *ebx = 0;
+            *ecx = 0;
+            *edx = 0;
+        }
         break;
     case 0x1F:
         /* V2 Extended Topology Enumeration Leaf */
