@@ -547,6 +547,8 @@ typedef enum X86Seg {
 #define XSTATE_CET_U_BIT                11
 #define XSTATE_CET_S_BIT                12
 #define XSTATE_ARCH_LBR                 15
+#define XSTATE_XTILE_CFG_BIT            17
+#define XSTATE_XTILE_DATA_BIT           18
 
 #define XSTATE_FP_MASK                  (1ULL << XSTATE_FP_BIT)
 #define XSTATE_SSE_MASK                 (1ULL << XSTATE_SSE_BIT)
@@ -560,6 +562,8 @@ typedef enum X86Seg {
 #define XSTATE_CET_U_MASK               (1ULL << XSTATE_CET_U_BIT)
 #define XSTATE_CET_S_MASK               (1ULL << XSTATE_CET_S_BIT)
 #define XSTATE_ARCH_LBR_MASK            (1ULL << XSTATE_ARCH_LBR)
+#define XSTATE_XTILE_CFG_MASK           (1ULL << XSTATE_XTILE_CFG_BIT)
+#define XSTATE_XTILE_DATA_MASK          (1ULL << XSTATE_XTILE_DATA_BIT)
 
 /* CPUID feature bits available in XCR0 */
 #define CPUID_XSTATE_XCR0_MASK  (XSTATE_FP_MASK | XSTATE_SSE_MASK | \
@@ -567,6 +571,11 @@ typedef enum X86Seg {
                                  XSTATE_BNDCSR_MASK | XSTATE_OPMASK_MASK | \
                                  XSTATE_ZMM_Hi256_MASK | \
                                  XSTATE_Hi16_ZMM_MASK | XSTATE_PKRU_MASK)
+#define XSTATE_AVX_512_MASK             (XSTATE_OPMASK_MASK |       \
+                                         XSTATE_ZMM_Hi256_MASK |    \
+                                         XSTATE_Hi16_ZMM_MASK)
+#define XSTATE_AMX_MASK                 (XSTATE_XTILE_CFG_MASK |    \
+                                         XSTATE_XTILE_DATA_MASK)
 
 /* CPUID feature words */
 typedef enum FeatureWord {
@@ -874,8 +883,14 @@ typedef uint64_t FeatureWordArray[FEATURE_WORDS];
 #define CPUID_7_0_EDX_ARCH_LBR          (1U << 19)
 /* CET IBT feature */
 #define CPUID_7_0_EDX_CET_IBT           (1U << 20)
+/* Intel AMX BF16 Support */
+#define CPUID_7_0_EDX_AMX_BF16          (1U << 22)
 /* AVX512_FP16 instruction */
 #define CPUID_7_0_EDX_AVX512_FP16       (1U << 23)
+/* Intel AMX TILE (two dimensional registers) Support */
+#define CPUID_7_0_EDX_AMX_TILE          (1U << 24)
+/* Intel AMX INT8 Support */
+#define CPUID_7_0_EDX_AMX_INT8          (1U << 25)
 /* Speculation Control */
 #define CPUID_7_0_EDX_SPEC_CTRL         (1U << 26)
 /* Single Thread Indirect Branch Predictors */
