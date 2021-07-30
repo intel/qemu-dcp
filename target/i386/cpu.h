@@ -543,9 +543,11 @@ typedef enum X86Seg {
 #define XSTATE_OPMASK_BIT               5
 #define XSTATE_ZMM_Hi256_BIT            6
 #define XSTATE_Hi16_ZMM_BIT             7
+#define XSTATE_RTIT_BIT                 8
 #define XSTATE_PKRU_BIT                 9
 #define XSTATE_CET_U_BIT                11
 #define XSTATE_CET_S_BIT                12
+#define XSTATE_RESERVED_14_BIT          14
 #define XSTATE_ARCH_LBR                 15
 #define XSTATE_XTILE_CFG_BIT            17
 #define XSTATE_XTILE_DATA_BIT           18
@@ -558,9 +560,11 @@ typedef enum X86Seg {
 #define XSTATE_OPMASK_MASK              (1ULL << XSTATE_OPMASK_BIT)
 #define XSTATE_ZMM_Hi256_MASK           (1ULL << XSTATE_ZMM_Hi256_BIT)
 #define XSTATE_Hi16_ZMM_MASK            (1ULL << XSTATE_Hi16_ZMM_BIT)
+#define XSTATE_RTIT_MASK                (1ULL << XSTATE_RTIT_BIT)
 #define XSTATE_PKRU_MASK                (1ULL << XSTATE_PKRU_BIT)
 #define XSTATE_CET_U_MASK               (1ULL << XSTATE_CET_U_BIT)
 #define XSTATE_CET_S_MASK               (1ULL << XSTATE_CET_S_BIT)
+#define XSTATE_RESERVED_14_MASK         (1ULL << XSTATE_RESERVED_14_BIT)
 #define XSTATE_ARCH_LBR_MASK            (1ULL << XSTATE_ARCH_LBR)
 #define XSTATE_XTILE_CFG_MASK           (1ULL << XSTATE_XTILE_CFG_BIT)
 #define XSTATE_XTILE_DATA_MASK          (1ULL << XSTATE_XTILE_DATA_BIT)
@@ -574,6 +578,8 @@ typedef enum X86Seg {
 #define XSTATE_AVX_512_MASK             (XSTATE_OPMASK_MASK |       \
                                          XSTATE_ZMM_Hi256_MASK |    \
                                          XSTATE_Hi16_ZMM_MASK)
+#define XSTATE_CET_MASK                 (XSTATE_CET_U_MASK  |       \
+                                         XSTATE_CET_S_MASK)
 #define XSTATE_AMX_MASK                 (XSTATE_XTILE_CFG_MASK |    \
                                          XSTATE_XTILE_DATA_MASK)
 
@@ -873,6 +879,8 @@ typedef uint64_t FeatureWordArray[FEATURE_WORDS];
 #define CPUID_7_0_EDX_AVX512_4FMAPS     (1U << 3)
 /* Fast Short Rep Mov */
 #define CPUID_7_0_EDX_FSRM              (1U << 4)
+/* User Interrupt Support*/
+#define CPUID_7_0_EDX_ULI               (1U << 5)
 /* AVX512 Vector Pair Intersection to a Pair of Mask Registers */
 #define CPUID_7_0_EDX_AVX512_VP2INTERSECT (1U << 8)
 /* SERIALIZE instruction */
