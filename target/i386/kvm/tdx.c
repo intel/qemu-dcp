@@ -41,6 +41,7 @@
 #include "hw/i386/ich9.h"
 
 #define TDX1_TD_ATTRIBUTE_DEBUG BIT_ULL(0)
+#define TDX1_TD_ATTRIBUTE_PKS   BIT_ULL(30)
 #define TDX1_TD_ATTRIBUTE_PERFMON BIT_ULL(63)
 #define TDX1_MIN_TSC_FREQUENCY_KHZ (100 * 1000)
 #define TDX1_MAX_TSC_FREQUENCY_KHZ (10 * 1000 * 1000)
@@ -871,6 +872,8 @@ void tdx_pre_create_vcpu(CPUState *cpu)
     init_vm.attributes = 0;
     init_vm.attributes |= tdx->debug ? TDX1_TD_ATTRIBUTE_DEBUG : 0;
     init_vm.attributes |= x86cpu->enable_pmu ? TDX1_TD_ATTRIBUTE_PERFMON : 0;
+    init_vm.attributes |= (env->features[FEAT_7_0_ECX] & CPUID_7_0_ECX_PKS) ?
+                          TDX1_TD_ATTRIBUTE_PKS : 0;
 
     QEMU_BUILD_BUG_ON(sizeof(init_vm.mrconfigid) != sizeof(tdx->mrconfigid));
     memcpy(init_vm.mrconfigid, tdx->mrconfigid, sizeof(init_vm.mrconfigid));
