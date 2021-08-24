@@ -140,6 +140,7 @@ typedef struct VFIODevice {
     bool no_mmap;
     bool ram_block_discard_allowed;
     bool enable_migration;
+    bool enable_dynamic_mmap;
     VFIODeviceOps *ops;
     unsigned int num_irqs;
     unsigned int num_regions;
