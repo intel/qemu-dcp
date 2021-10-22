@@ -3316,6 +3316,7 @@ static gboolean vtd_flush_pasid(gpointer key, gpointer value,
     VTDPASIDCacheEntry *pc_entry = &vtd_pasid_as->pasid_cache_entry;
     VTDBus *vtd_bus = vtd_pasid_as->vtd_bus;
     VTDPASIDEntry pe;
+    VTDContextEntry ce;
     VTDHostIOMMUContext *vtd_dev_icx;
     VTDIOTLBPageInvInfo info;
     uint16_t did;
@@ -3330,6 +3331,17 @@ static gboolean vtd_flush_pasid(gpointer key, gpointer value,
 
     switch (pc_info->type) {
     case VTD_PASID_CACHE_FORCE_RESET:
+        /* For passthr dev which gpasid has been bound, we should not force reset */
+        if (pasid == 0 && vtd_pasid_as->bound_to_host &&
+            s->root_scalable && likely(s->dmar_enabled) && vtd_dev_icx) {
+            ret = vtd_dev_to_context_entry(s, pci_bus_num(vtd_bus->bus), devfn, &ce);
+            if (!ret) {
+                ret = vtd_ce_get_rid2pasid_entry(s, &ce, &pe);
+                if (!ret && (VTD_PE_GET_TYPE(&pe) == VTD_SM_PASID_ENTRY_FLT)) {
+                    return true;
+                }
+            }
+        }
         goto remove;
     case VTD_PASID_CACHE_PASIDSI:
         if (pc_info->pasid != pasid) {
