@@ -574,6 +574,11 @@ typedef enum X86Seg {
 #define XSTATE_ARCH_LBR_MASK            (1ULL << XSTATE_ARCH_LBR)
 #define XSTATE_XTILE_CFG_MASK           (1ULL << XSTATE_XTILE_CFG_BIT)
 #define XSTATE_XTILE_DATA_MASK          (1ULL << XSTATE_XTILE_DATA_BIT)
+#define XFEATURE_XTILE_MASK             (XSTATE_XTILE_CFG_MASK \
+                                         | XSTATE_XTILE_DATA_MASK)
+
+#define ARCH_GET_XCOMP_GUEST_PERM       0x1024
+#define ARCH_REQ_XCOMP_GUEST_PERM       0x1025
 
 /* CPUID feature bits available in XCR0 */
 #define CPUID_XSTATE_XCR0_MASK  (XSTATE_FP_MASK | XSTATE_SSE_MASK | \
