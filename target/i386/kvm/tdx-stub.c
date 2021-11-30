@@ -12,7 +12,16 @@ int tdx_system_firmware_init(PCMachineState *pcms, MemoryRegion *rom_memory)
 {
     return -ENOSYS;
 }
+
+void tdx_handle_exit(X86CPU *cpu, struct kvm_tdx_exit *tdx_exit)
+{
+}
 #endif
+
+bool kvm_tdx_enabled(void)
+{
+    return false;
+}
 
 void tdx_pre_create_vcpu(CPUState *cpu)
 {
@@ -43,8 +52,4 @@ uint32_t tdx_get_supported_cpuid(uint32_t function, uint32_t index, int reg)
 struct TDXCapability *tdx_get_capabilities(void)
 {
     return NULL;
-}
-
-void tdx_handle_vmcall(X86CPU *cpu, struct kvm_tdx_vmcall *vmcall)
-{
 }

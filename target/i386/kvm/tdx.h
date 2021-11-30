@@ -62,6 +62,5 @@ typedef struct TdxGuest {
 
 int tdx_kvm_init(ConfidentialGuestSupport *cgs, KVMState *s, Error **errp);
 uint32_t tdx_get_cpuid_config(uint32_t function, uint32_t index, int reg);
-void tdx_handle_exit(X86CPU *cpu, struct kvm_tdx_exit *tdx_exit);
 
 #endif
