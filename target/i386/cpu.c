@@ -6300,7 +6300,7 @@ static void x86_cpu_enable_xsave_components(X86CPU *cpu)
          * of two features is enabled, we set the XSAVES support bit to make
          * the enabled feature work.
          */
-        if (i == XSTATE_CET_U_BIT || i == XSTATE_CET_S_BIT) {
+        if (!kvm_tdx_enabled() && (i == XSTATE_CET_U_BIT || i == XSTATE_CET_S_BIT)) {
             uint64_t ecx = env->features[FEAT_7_0_ECX];
             uint64_t edx = env->features[FEAT_7_0_EDX];
 

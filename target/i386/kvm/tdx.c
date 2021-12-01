@@ -422,8 +422,11 @@ FeatureMask tdx_xfam_feature_delegate[] = {
     [XSTATE_Hi16_ZMM_BIT] = { .index = FEAT_7_0_EBX, .mask = CPUID_7_0_EBX_AVX512F },
     [XSTATE_RTIT_BIT] = { .index = FEAT_7_0_EBX, .mask = CPUID_7_0_EBX_INTEL_PT },
     [XSTATE_PKRU_BIT] = { .index = FEAT_7_0_ECX, .mask = CPUID_7_0_ECX_PKU },
-    [XSTATE_XTILE_CFG_BIT] = { .index = FEAT_7_0_EDX, .mask = CPUID_7_0_EDX_AMX_BF16 },
-    [XSTATE_XTILE_DATA_BIT] = { .index = FEAT_7_0_EDX, .mask = CPUID_7_0_EDX_AMX_BF16 },
+    [XSTATE_CET_U_BIT] = { .index = FEAT_7_0_ECX, .mask = CPUID_7_0_ECX_CET_SHSTK },
+    [XSTATE_CET_S_BIT] = { .index = FEAT_7_0_ECX, .mask = CPUID_7_0_ECX_CET_SHSTK },
+    [XSTATE_ARCH_LBR] = { .index = FEAT_7_0_EDX, .mask = CPUID_7_0_EDX_ARCH_LBR },
+    [XSTATE_XTILE_CFG_BIT] = { .index = FEAT_7_0_EDX, .mask = CPUID_7_0_EDX_AMX_TILE },
+    [XSTATE_XTILE_DATA_BIT] = { .index = FEAT_7_0_EDX, .mask = CPUID_7_0_EDX_AMX_TILE },
 };
 
 #define ATTRIBUTE_MAX_BITS      64
