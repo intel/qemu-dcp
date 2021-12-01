@@ -6,6 +6,12 @@ Purpose
 =======
 Prepare for releasing public SPR BKC QEMU to external and internal customers.
 
+SPR-BKC-QEMU-v1.2
+----------------
+
+5. AMX (Jing Liu)
+6. Compile error and TDX fix (Chenyi Qiang)
+
 SPR-BKC-QEMU-v1.1
 ----------------
 
