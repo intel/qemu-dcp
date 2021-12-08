@@ -6,6 +6,11 @@ Purpose
 =======
 Prepare for releasing public SPR BKC QEMU to external and internal customers.
 
+SPR-BKC-QEMU-v1.3
+----------------
+
+7. PKS TDX support (Chenyi Qiang)
+
 SPR-BKC-QEMU-v1.2
 ----------------
 
