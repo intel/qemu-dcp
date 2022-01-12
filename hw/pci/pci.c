@@ -2706,7 +2706,7 @@ static void pci_device_class_base_init(ObjectClass *klass, void *data)
 }
 
 static void pci_device_get_iommu_bus_devfn(PCIDevice *dev,
-                              PCIBus **pbus, uint8_t *pdevfn)
+                              PCIBus **pbus, PCIBus **piommu_bus, uint8_t *pdevfn)
 {
     PCIBus *bus = pci_get_bus(dev);
     PCIBus *iommu_bus = bus;
@@ -2758,16 +2758,17 @@ static void pci_device_get_iommu_bus_devfn(PCIDevice *dev,
         iommu_bus = parent_bus;
     }
     *pbus = iommu_bus;
+    *piommu_bus = iommu_bus;
     *pdevfn = devfn;
 }
 
 AddressSpace *pci_device_iommu_address_space(PCIDevice *dev)
 {
-    PCIBus *bus = pci_get_bus(dev);
-    PCIBus *iommu_bus = bus;
+    PCIBus *bus;
+    PCIBus *iommu_bus;
     uint8_t devfn;
 
-    pci_device_get_iommu_bus_devfn(dev, &bus, &devfn);
+    pci_device_get_iommu_bus_devfn(dev, &bus, &iommu_bus, &devfn);
     if (!pci_bus_bypass_iommu(bus) && iommu_bus &&
         iommu_bus->iommu_ops && iommu_bus->iommu_ops->get_address_space) {
         return iommu_bus->iommu_ops->get_address_space(bus,
@@ -2779,13 +2780,14 @@ AddressSpace *pci_device_iommu_address_space(PCIDevice *dev)
 int pci_device_get_iommu_attr(PCIDevice *dev, IOMMUAttr attr, void *data)
 {
     PCIBus *bus;
+    PCIBus *iommu_bus;
     uint8_t devfn;
 
-    pci_device_get_iommu_bus_devfn(dev, &bus, &devfn);
-    if (bus && bus->iommu_ops &&
-        bus->iommu_ops->get_iommu_attr) {
-        return bus->iommu_ops->get_iommu_attr(bus, bus->iommu_opaque,
-                                               devfn, attr, data);
+    pci_device_get_iommu_bus_devfn(dev, &bus, &iommu_bus, &devfn);
+    if (!pci_bus_bypass_iommu(bus) && iommu_bus &&
+        iommu_bus->iommu_ops && iommu_bus->iommu_ops->get_iommu_attr) {
+        return iommu_bus->iommu_ops->get_iommu_attr(bus, iommu_bus->iommu_opaque,
+                                                    devfn, attr, data);
     }
     return -ENOENT;
 }
@@ -2794,13 +2796,14 @@ int pci_device_set_iommu_context(PCIDevice *dev,
                                  HostIOMMUContext *iommu_ctx)
 {
     PCIBus *bus;
+    PCIBus *iommu_bus;
     uint8_t devfn;
 
-    pci_device_get_iommu_bus_devfn(dev, &bus, &devfn);
-    if (bus && bus->iommu_ops &&
-        bus->iommu_ops->set_iommu_context) {
-        return bus->iommu_ops->set_iommu_context(bus,
-                              bus->iommu_opaque, devfn, iommu_ctx);
+    pci_device_get_iommu_bus_devfn(dev, &bus, &iommu_bus, &devfn);
+    if (!pci_bus_bypass_iommu(bus) && iommu_bus &&
+        iommu_bus->iommu_ops && iommu_bus->iommu_ops->set_iommu_context) {
+        return iommu_bus->iommu_ops->set_iommu_context(bus,
+                              iommu_bus->iommu_opaque, devfn, iommu_ctx);
     }
     return 0;
 }
@@ -2808,13 +2811,14 @@ int pci_device_set_iommu_context(PCIDevice *dev,
 void pci_device_unset_iommu_context(PCIDevice *dev)
 {
     PCIBus *bus;
+    PCIBus *iommu_bus;
     uint8_t devfn;
 
-    pci_device_get_iommu_bus_devfn(dev, &bus, &devfn);
-    if (bus && bus->iommu_ops &&
-        bus->iommu_ops->unset_iommu_context) {
-        bus->iommu_ops->unset_iommu_context(bus,
-                                 bus->iommu_opaque, devfn);
+    pci_device_get_iommu_bus_devfn(dev, &bus, &iommu_bus, &devfn);
+    if (!pci_bus_bypass_iommu(bus) && iommu_bus &&
+        iommu_bus->iommu_ops && iommu_bus->iommu_ops->unset_iommu_context) {
+        return iommu_bus->iommu_ops->unset_iommu_context(bus,
+                              iommu_bus->iommu_opaque, devfn);
     }
 }
 
@@ -2823,13 +2827,14 @@ int pci_device_report_iommu_fault(PCIDevice *dev,
                                   struct iommu_fault *buf)
 {
     PCIBus *bus;
+    PCIBus *iommu_bus;
     uint8_t devfn;
 
-    pci_device_get_iommu_bus_devfn(dev, &bus, &devfn);
-    if (bus && bus->iommu_ops &&
-        bus->iommu_ops->report_iommu_fault) {
-        return bus->iommu_ops->report_iommu_fault(bus,
-                              bus->iommu_opaque, devfn, count, buf);
+    pci_device_get_iommu_bus_devfn(dev, &bus, &iommu_bus, &devfn);
+    if (!pci_bus_bypass_iommu(bus) && iommu_bus &&
+        iommu_bus->iommu_ops && iommu_bus->iommu_ops->set_iommu_context) {
+        return iommu_bus->iommu_ops->report_iommu_fault(bus,
+                              iommu_bus->iommu_opaque, devfn, count, buf);
     }
     return 0;
 }
