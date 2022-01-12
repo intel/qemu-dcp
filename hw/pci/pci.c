@@ -2772,7 +2772,7 @@ AddressSpace *pci_device_iommu_address_space(PCIDevice *dev)
     if (!pci_bus_bypass_iommu(bus) && iommu_bus &&
         iommu_bus->iommu_ops && iommu_bus->iommu_ops->get_address_space) {
         return iommu_bus->iommu_ops->get_address_space(bus,
-                                           iommu_bus->iommu_opaque, devfn);
+                                           iommu_bus->iommu_opaque, devfn, dev);
     }
     return &address_space_memory;
 }
@@ -2787,7 +2787,7 @@ int pci_device_get_iommu_attr(PCIDevice *dev, IOMMUAttr attr, void *data)
     if (!pci_bus_bypass_iommu(bus) && iommu_bus &&
         iommu_bus->iommu_ops && iommu_bus->iommu_ops->get_iommu_attr) {
         return iommu_bus->iommu_ops->get_iommu_attr(bus, iommu_bus->iommu_opaque,
-                                                    devfn, attr, data);
+                                                    devfn, dev, attr, data);
     }
     return -ENOENT;
 }
@@ -2803,7 +2803,7 @@ int pci_device_set_iommu_context(PCIDevice *dev,
     if (!pci_bus_bypass_iommu(bus) && iommu_bus &&
         iommu_bus->iommu_ops && iommu_bus->iommu_ops->set_iommu_context) {
         return iommu_bus->iommu_ops->set_iommu_context(bus,
-                              iommu_bus->iommu_opaque, devfn, iommu_ctx);
+                              iommu_bus->iommu_opaque, devfn, dev, iommu_ctx);
     }
     return 0;
 }
@@ -2818,7 +2818,7 @@ void pci_device_unset_iommu_context(PCIDevice *dev)
     if (!pci_bus_bypass_iommu(bus) && iommu_bus &&
         iommu_bus->iommu_ops && iommu_bus->iommu_ops->unset_iommu_context) {
         return iommu_bus->iommu_ops->unset_iommu_context(bus,
-                              iommu_bus->iommu_opaque, devfn);
+                              iommu_bus->iommu_opaque, devfn, dev);
     }
 }
 
@@ -2834,7 +2834,7 @@ int pci_device_report_iommu_fault(PCIDevice *dev,
     if (!pci_bus_bypass_iommu(bus) && iommu_bus &&
         iommu_bus->iommu_ops && iommu_bus->iommu_ops->set_iommu_context) {
         return iommu_bus->iommu_ops->report_iommu_fault(bus,
-                              iommu_bus->iommu_opaque, devfn, count, buf);
+                              iommu_bus->iommu_opaque, devfn, dev, count, buf);
     }
     return 0;
 }

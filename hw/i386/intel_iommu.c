@@ -5828,12 +5828,17 @@ VTDAddressSpace *vtd_find_add_as(IntelIOMMUState *s, PCIBus *bus, int devfn)
 }
 
 static int vtd_dev_get_iommu_attr(PCIBus *bus, void *opaque, int32_t devfn,
-                                   IOMMUAttr attr, void *data)
+                                  PCIDevice *dev, IOMMUAttr attr, void *data)
 {
     IntelIOMMUState *s = opaque;
     int ret = 0;
 
     assert(0 <= devfn && devfn < PCI_DEVFN_MAX);
+
+    if (dev && !strcmp(dev->name, "vfio-pci")) {
+        bus = pci_get_bus(dev);
+        devfn = dev->devfn;
+    }
 
     switch (attr) {
     case IOMMU_WANT_NESTING:
@@ -5926,7 +5931,7 @@ static bool vtd_check_iommu_ctx(IntelIOMMUState *s,
 }
 
 static int vtd_dev_set_iommu_context(PCIBus *bus, void *opaque,
-                                     int devfn,
+                                     int devfn, PCIDevice *dev,
                                      HostIOMMUContext *iommu_ctx)
 {
     IntelIOMMUState *s = opaque;
@@ -5934,6 +5939,12 @@ static int vtd_dev_set_iommu_context(PCIBus *bus, void *opaque,
     VTDHostIOMMUContext *vtd_dev_icx;
 
     assert(0 <= devfn && devfn < PCI_DEVFN_MAX);
+
+    if (dev && !strcmp(dev->name, "vfio-pci")) {
+        bus = pci_get_bus(dev);
+        devfn = dev->devfn;
+    }
+
     /* only modern scalable supports unset_ioimmu_context */
     assert(s->scalable_modern);
 
@@ -5963,13 +5974,20 @@ static int vtd_dev_set_iommu_context(PCIBus *bus, void *opaque,
     return 0;
 }
 
-static void vtd_dev_unset_iommu_context(PCIBus *bus, void *opaque, int devfn)
+static void vtd_dev_unset_iommu_context(PCIBus *bus, void *opaque,
+                                        int devfn, PCIDevice *dev)
 {
     IntelIOMMUState *s = opaque;
     VTDBus *vtd_bus;
     VTDHostIOMMUContext *vtd_dev_icx;
 
     assert(0 <= devfn && devfn < PCI_DEVFN_MAX);
+
+    if (dev && !strcmp(dev->name, "vfio-pci")) {
+        bus = pci_get_bus(dev);
+        devfn = dev->devfn;
+    }
+
     /* only modern scalable supports set_ioimmu_context */
     assert(s->scalable_modern);
 
@@ -6000,8 +6018,8 @@ static void vtd_assemble_pg_resp(struct iommu_page_response *pg_resp,
 }
 
 static int vtd_dev_report_iommu_fault(PCIBus *bus, void *opaque,
-                                      int devfn, int count,
-                                      struct iommu_fault *buf)
+                                      int devfn, PCIDevice *dev,
+                                      int count, struct iommu_fault *buf)
 {
     uint8_t bus_num = pci_bus_num(bus);
     struct iommu_fault *fault = buf;
@@ -6403,12 +6421,26 @@ static void vtd_reset(DeviceState *dev)
     vtd_address_space_refresh_all(s);
 }
 
-static AddressSpace *vtd_host_dma_iommu(PCIBus *bus, void *opaque, int devfn)
+static AddressSpace *vtd_host_dma_iommu(PCIBus *bus, void *opaque,
+                                        int devfn, PCIDevice *dev)
 {
     IntelIOMMUState *s = opaque;
     VTDAddressSpace *vtd_as;
 
     assert(0 <= devfn && devfn < PCI_DEVFN_MAX);
+
+    /*
+     * If assigned devices lays behind a PCIe-to-PCI bridge, the pci
+     * layer of qemu makes these devices share the same address
+     * space since they will be aliased. However, vIOMMU should manage
+     * them separately since the devices should have its own bdf.
+     * Only detected vfio device so far. In future, vdpa device may
+     * also be checked.
+     */
+    if (dev && !strcmp(dev->name, "vfio-pci")) {
+        bus = pci_get_bus(dev);
+        devfn = dev->devfn;
+    }
 
     vtd_as = vtd_find_add_as(s, bus, devfn);
     return &vtd_as->as;
@@ -6640,7 +6672,7 @@ static void vtd_realize(DeviceState *dev, Error **errp)
     sysbus_mmio_map(SYS_BUS_DEVICE(s), 0, Q35_HOST_BRIDGE_IOMMU_ADDR);
     pci_setup_iommu(bus, &vtd_iommu_ops, dev);
     /* Pseudo address space under root PCI bus. */
-    x86ms->ioapic_as = vtd_host_dma_iommu(bus, s, Q35_PSEUDO_DEVFN_IOAPIC);
+    x86ms->ioapic_as = vtd_host_dma_iommu(bus, s, Q35_PSEUDO_DEVFN_IOAPIC, NULL);
     qemu_add_machine_init_done_notifier(&vtd_machine_done_notify);
     vtd_migration_probe(s, errp);
 }

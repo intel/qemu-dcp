@@ -497,17 +497,18 @@ typedef enum IOMMUAttr {
 typedef struct PCIIOMMUOps PCIIOMMUOps;
 struct PCIIOMMUOps {
     AddressSpace * (*get_address_space)(PCIBus *bus,
-                                void *opaque, int32_t devfn);
-    int (*get_iommu_attr)(PCIBus *bus, void *opaque, int32_t devfn,
-                           IOMMUAttr attr, void *data);
+                                void *opaque, int devfn,
+                                PCIDevice *dev);
+    int (*get_iommu_attr)(PCIBus *bus, void *opaque, int devfn,
+                          PCIDevice *dev, IOMMUAttr attr, void *data);
     int (*set_iommu_context)(PCIBus *bus, void *opaque,
-                             int32_t devfn,
+                             int devfn, PCIDevice *dev,
                              HostIOMMUContext *iommu_ctx);
     void (*unset_iommu_context)(PCIBus *bus, void *opaque,
-                                int32_t devfn);
+                                int devfn, PCIDevice *dev);
     int (*report_iommu_fault)(PCIBus *bus, void *opaque,
-                             int32_t devfn, int count,
-                             struct iommu_fault *buf);
+                              int devfn, PCIDevice *dev,
+                              int count, struct iommu_fault *buf);
 };
 
 AddressSpace *pci_device_iommu_address_space(PCIDevice *dev);
