@@ -206,8 +206,10 @@ int vfio_set_irq_signaling(VFIODevice *vbasedev, int index, int subindex,
 int vfio_region_write(void *opaque, hwaddr addr,
                       uint64_t data, unsigned size)
 {
-    VFIORegion *region = opaque;
+    VFIORegionMmap *rg_map = opaque;
+    VFIORegion *region = rg_map->region;
     VFIODevice *vbasedev = region->vbasedev;
+    off_t offset = region->fd_offset;
     union {
         uint8_t byte;
         uint16_t word;
@@ -234,7 +236,14 @@ int vfio_region_write(void *opaque, hwaddr addr,
         break;
     }
 
-    if (pwrite(vbasedev->fd, &buf, size, region->fd_offset + addr) != size) {
+    /* Need add corresponding mmap offset if there is */
+    if (region->vbasedev->enable_dynamic_mmap &&
+        (region->flags & VFIO_REGION_INFO_FLAG_DYNAMIC_TRAP) &&
+        rg_map->mmap) {
+        offset += rg_map->mmap->offset;
+    }
+
+    if (pwrite(vbasedev->fd, &buf, size, offset + addr) != size) {
         ret = -EIO;
         error_report("%s(%s:region%d+0x%"HWADDR_PRIx", 0x%"PRIx64
                      ",%d) failed: %m",
@@ -259,8 +268,10 @@ int vfio_region_write(void *opaque, hwaddr addr,
 uint64_t vfio_region_read(void *opaque,
                           hwaddr addr, unsigned size)
 {
-    VFIORegion *region = opaque;
+    VFIORegionMmap *rg_map = opaque;
+    VFIORegion *region = rg_map->region;
     VFIODevice *vbasedev = region->vbasedev;
+    off_t offset = region->fd_offset;
     union {
         uint8_t byte;
         uint16_t word;
@@ -269,7 +280,14 @@ uint64_t vfio_region_read(void *opaque,
     } buf;
     uint64_t data = 0;
 
-    if (pread(vbasedev->fd, &buf, size, region->fd_offset + addr) != size) {
+    /* Need add corresponding mmap offset if there is*/
+    if (region->vbasedev->enable_dynamic_mmap &&
+        (region->flags & VFIO_REGION_INFO_FLAG_DYNAMIC_TRAP) &&
+        rg_map->mmap) {
+        offset += rg_map->mmap->offset;
+    }
+
+    if (pread(vbasedev->fd, &buf, size, offset + addr) != size) {
         error_report("%s(%s:region%d+0x%"HWADDR_PRIx", %d) failed: %m",
                      __func__, vbasedev->name, region->nr,
                      addr, size);
@@ -1600,9 +1618,15 @@ int vfio_region_setup(Object *obj, VFIODevice *vbasedev, VFIORegion *region,
     region->nr = index;
 
     if (region->size) {
+        VFIORegionMmap *rg_map;
+
         region->mem = g_new0(MemoryRegion, 1);
+        rg_map = g_new0(VFIORegionMmap, 1);
+        rg_map->region = region;
+        rg_map->mmap = NULL;
+        region->rg_map = rg_map;
         memory_region_init_io(region->mem, obj, &vfio_region_ops,
-                              region, name, region->size);
+                              rg_map, name, region->size);
 
         if (!vbasedev->no_mmap &&
             region->flags & VFIO_REGION_INFO_FLAG_MMAP) {
@@ -1641,6 +1665,7 @@ int vfio_region_mmap(VFIORegion *region)
 {
     int i, prot = 0;
     char *name;
+    VFIORegionMmap *rg_map;
 
     if (!region->mem) {
         return 0;
@@ -1675,12 +1700,25 @@ int vfio_region_mmap(VFIORegion *region)
 
         name = g_strdup_printf("%s mmaps[%d]",
                                memory_region_name(region->mem), i);
-        memory_region_init_ram_device_ptr_ops(&region->mmaps[i].mem,
-                                          memory_region_owner(region->mem),
-                                          name, region->mmaps[i].size,
-                                          region->mmaps[i].mmap,
-                                          (void *)region,
-                                          &vfio_region_ops);
+        if (region->vbasedev->enable_dynamic_mmap &&
+            (region->flags & VFIO_REGION_INFO_FLAG_DYNAMIC_TRAP)) {
+            rg_map = g_new0(VFIORegionMmap, 1);
+            rg_map->region = region;
+            rg_map->mmap = &region->mmaps[i];
+            region->rg_map = rg_map;
+            memory_region_init_ram_device_ptr_ops(&region->mmaps[i].mem,
+                                                  memory_region_owner(region->mem),
+                                                  name, region->mmaps[i].size,
+                                                  region->mmaps[i].mmap,
+                                                  (void *)rg_map,
+                                                  &vfio_region_ops);
+        } else {
+            memory_region_init_ram_device_ptr(&region->mmaps[i].mem,
+                                              memory_region_owner(region->mem),
+                                              name, region->mmaps[i].size,
+                                              region->mmaps[i].mmap);
+        }
+
         g_free(name);
         memory_region_add_subregion(region->mem, region->mmaps[i].offset,
                                     &region->mmaps[i].mem);
@@ -1795,6 +1833,7 @@ void vfio_region_finalize(VFIORegion *region)
 
     g_free(region->mem);
     g_free(region->mmaps);
+    g_free(region->rg_map);
 
     trace_vfio_region_finalize(region->vbasedev->name, region->nr);
 
@@ -1804,6 +1843,7 @@ void vfio_region_finalize(VFIORegion *region)
     region->size = 0;
     region->flags = 0;
     region->nr = 0;
+    region->rg_map = NULL;
 }
 
 void vfio_region_mmaps_set_enabled(VFIORegion *region, bool enabled)
