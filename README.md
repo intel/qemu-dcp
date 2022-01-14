@@ -6,6 +6,11 @@ Purpose
 =======
 Prepare for releasing public SPR BKC QEMU to external and internal customers.
 
+SPR-BKC-QEMU-v1.4
+----------------
+
+8. SVM-SIOV support (Yi Liu)
+
 SPR-BKC-QEMU-v1.3
 ----------------
 
