@@ -6,6 +6,11 @@ Purpose
 =======
 Prepare for releasing public SPR BKC QEMU to external and internal customers.
 
+SPR-BKC-QEMU-v1.5
+----------------
+
+9. vIOMMU 5lvl paging support and on bug fix(Yi Liu)
+
 SPR-BKC-QEMU-v1.4
 ----------------
 
