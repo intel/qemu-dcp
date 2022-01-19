@@ -3388,7 +3388,7 @@ static gboolean vtd_flush_pasid(gpointer key, gpointer value,
             if (!ret) {
                 ret = vtd_ce_get_rid2pasid_entry(s, &ce, &pe);
                 if (!ret && (VTD_PE_GET_TYPE(&pe) == VTD_SM_PASID_ENTRY_FLT)) {
-                    return true;
+                    return false;
                 }
             }
         }
