@@ -503,9 +503,6 @@ typedef enum X86Seg {
 
 #define MSR_VM_HSAVE_PA                 0xc0010117
 
-#define MSR_IA32_XFD                    0x000001c4
-#define MSR_IA32_XFD_ERR                0x000001c5
-
 #define MSR_IA32_BNDCFGS                0x00000d90
 #define MSR_IA32_XSS                    0x00000da0
 #define MSR_IA32_UMWAIT_CONTROL         0xe1
