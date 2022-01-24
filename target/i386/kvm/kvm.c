@@ -17,6 +17,7 @@
 #include "qapi/error.h"
 #include <sys/ioctl.h>
 #include <sys/utsname.h>
+#include <sys/syscall.h>
 
 #include <linux/kvm.h>
 #include "standard-headers/asm-x86/kvm_para.h"
@@ -2363,6 +2364,29 @@ static void register_smram_listener(Notifier *n, void *unused)
                                  &smram_address_space, 1, "kvm-smram");
 }
 
+static void x86_xsave_req_perm(void)
+{
+    unsigned long bitmask;
+
+    long rc = syscall(SYS_arch_prctl, ARCH_REQ_XCOMP_GUEST_PERM,
+                      XSTATE_XTILE_DATA_BIT);
+    if (rc) {
+        /*
+         * The older kernel version(<5.15) can't support
+         * ARCH_REQ_XCOMP_GUEST_PERM and directly return.
+         */
+        return;
+    }
+
+    rc = syscall(SYS_arch_prctl, ARCH_GET_XCOMP_GUEST_PERM, &bitmask);
+    if (rc) {
+        error_report("prctl(ARCH_GET_XCOMP_GUEST_PERM) error: %ld", rc);
+    } else if (!(bitmask & XFEATURE_XTILE_MASK)) {
+        error_report("prctl(ARCH_REQ_XCOMP_GUEST_PERM) failure "
+                     "and bitmask=0x%lx", bitmask);
+    }
+}
+
 int kvm_arch_init(MachineState *ms, KVMState *s)
 {
     uint64_t identity_base = 0xfffbc000;
@@ -2400,6 +2424,8 @@ int kvm_arch_init(MachineState *ms, KVMState *s)
         return -ENOTSUP;
     }
 
+    /* Request AMX pemission for the guest */
+    x86_xsave_req_perm();
     has_xsave = kvm_check_extension(s, KVM_CAP_XSAVE);
     has_xcrs = kvm_check_extension(s, KVM_CAP_XCRS);
     has_pit_state2 = kvm_check_extension(s, KVM_CAP_PIT_STATE2);
