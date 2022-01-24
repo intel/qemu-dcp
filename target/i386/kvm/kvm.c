@@ -2040,30 +2040,16 @@ int kvm_arch_init_vcpu(CPUState *cs)
     }
 
     if (has_xsave) {
-        /* Get the XCR0 feature size */
-        uint32_t size = kvm_arch_get_supported_cpuid(kvm_state, 0xd, 0, R_ECX);
-
-        if (size <= sizeof(struct kvm_xsave)) {
-            env->xsave_buf_len = sizeof(struct kvm_xsave);
-            env->xsave_buf = qemu_memalign(4096, env->xsave_buf_len);
-            memset(env->xsave_buf, 0, env->xsave_buf_len);
-        } else {
-            struct kvm_xsave2 *xsave2;
-
-            env->xsave_buf_len = QEMU_ALIGN_UP(sizeof(struct kvm_xsave2) + size, 4096);
-            env->xsave_buf = qemu_memalign(4096, env->xsave_buf_len);
-            memset(env->xsave_buf, 0, env->xsave_buf_len);
-
-            xsave2 = (struct kvm_xsave2*)env->xsave_buf;
-            xsave2->flag = 0;
-            xsave2->size = env->xsave_buf_len;
-        }
+        env->xsave_buf_len = sizeof(struct kvm_xsave);
+        env->xsave_buf = qemu_memalign(4096, env->xsave_buf_len);
+        memset(env->xsave_buf, 0, env->xsave_buf_len);
 
         /*
          * The allocated storage must be large enough for all of the
          * possible XSAVE state components.
          */
-        assert(size <= env->xsave_buf_len);
+        assert(kvm_arch_get_supported_cpuid(kvm_state, 0xd, 0, R_ECX)
+               <= env->xsave_buf_len);
     }
 
     max_nested_state_len = kvm_max_nested_state_length();
@@ -2682,17 +2668,9 @@ static int kvm_put_xsave(X86CPU *cpu)
     if (!has_xsave) {
         return kvm_put_fpu(cpu);
     }
+    x86_cpu_xsave_all_areas(cpu, xsave, env->xsave_buf_len);
 
-    if (env->xsave_buf_len <= sizeof(struct kvm_xsave)) {
-        x86_cpu_xsave_all_areas(cpu, xsave, env->xsave_buf_len);
-
-        return kvm_vcpu_ioctl(CPU(cpu), KVM_SET_XSAVE, xsave);
-    } else {
-        x86_cpu_xsave_all_areas(cpu, xsave + sizeof(struct kvm_xsave2),
-                                env->xsave_buf_len);
-
-        return kvm_vcpu_ioctl(CPU(cpu), KVM_SET_XSAVE2, xsave);
-    }
+    return kvm_vcpu_ioctl(CPU(cpu), KVM_SET_XSAVE, xsave);
 }
 
 static int kvm_put_xcrs(X86CPU *cpu)
@@ -3382,21 +3360,11 @@ static int kvm_get_xsave(X86CPU *cpu)
         return kvm_get_fpu(cpu);
     }
 
-    if (env->xsave_buf_len <= sizeof(struct kvm_xsave)) {
-        ret = kvm_vcpu_ioctl(CPU(cpu), KVM_GET_XSAVE, xsave);
-        if (ret < 0) {
-            return ret;
-        }
-        x86_cpu_xrstor_all_areas(cpu, xsave, env->xsave_buf_len);
-    } else {
-        ret = kvm_vcpu_ioctl(CPU(cpu), KVM_GET_XSAVE2, xsave);
-        if (ret < 0) {
-            return ret;
-        }
-        x86_cpu_xrstor_all_areas(cpu, xsave + sizeof(struct kvm_xsave2),
-                                 env->xsave_buf_len);
+    ret = kvm_vcpu_ioctl(CPU(cpu), KVM_GET_XSAVE, xsave);
+    if (ret < 0) {
+        return ret;
     }
-
+    x86_cpu_xrstor_all_areas(cpu, xsave, env->xsave_buf_len);
 
     return 0;
 }
