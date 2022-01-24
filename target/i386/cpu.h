@@ -551,10 +551,8 @@ typedef enum X86Seg {
 #define XSTATE_PASID_BIT                10
 #define XSTATE_CET_U_BIT                11
 #define XSTATE_CET_S_BIT                12
-#define XSTATE_RESERVED_13              13
 #define XSTATE_RESERVED_14_BIT          14
 #define XSTATE_ARCH_LBR                 15
-#define XSTATE_RESERVED_16              16
 #define XSTATE_XTILE_CFG_BIT            17
 #define XSTATE_XTILE_DATA_BIT           18
 
@@ -581,8 +579,7 @@ typedef enum X86Seg {
                                  XSTATE_YMM_MASK | XSTATE_BNDREGS_MASK | \
                                  XSTATE_BNDCSR_MASK | XSTATE_OPMASK_MASK | \
                                  XSTATE_ZMM_Hi256_MASK | \
-                                 XSTATE_Hi16_ZMM_MASK | XSTATE_PKRU_MASK | \
-                                 XSTATE_AMX_MASK)
+                                 XSTATE_Hi16_ZMM_MASK | XSTATE_PKRU_MASK)
 #define XSTATE_AVX_512_MASK             (XSTATE_OPMASK_MASK |       \
                                          XSTATE_ZMM_Hi256_MASK |    \
                                          XSTATE_Hi16_ZMM_MASK)
