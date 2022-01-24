@@ -991,7 +991,7 @@ FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
         .migratable_flags = XSTATE_FP_MASK | XSTATE_SSE_MASK |
             XSTATE_YMM_MASK | XSTATE_BNDREGS_MASK | XSTATE_BNDCSR_MASK |
             XSTATE_OPMASK_MASK | XSTATE_ZMM_Hi256_MASK | XSTATE_Hi16_ZMM_MASK |
-            XSTATE_PKRU_MASK,
+            XSTATE_PKRU_MASK | XSTATE_XTILE_CFG_MASK | XSTATE_XTILE_DATA_MASK,
     },
     [FEAT_XSAVE_XCR0_HI] = {
         .type = CPUID_FEATURE_WORD,
@@ -5739,7 +5739,8 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
             } else if ((x86_cpu_xsave_xss_components(cpu) >> count) & 1) {
                 *eax = esa->size;
                 *ebx = 0;
-                *ecx = 1;
+                *ecx = (esa->ecx & ESA_FEATURE_ALIGN64_MASK) |
+                       (esa->ecx & ESA_FEATURE_XFD_MASK) | 1;
             }
         }
         break;

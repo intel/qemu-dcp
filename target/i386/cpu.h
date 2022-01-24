@@ -585,7 +585,8 @@ typedef enum X86Seg {
                                  XSTATE_YMM_MASK | XSTATE_BNDREGS_MASK | \
                                  XSTATE_BNDCSR_MASK | XSTATE_OPMASK_MASK | \
                                  XSTATE_ZMM_Hi256_MASK | \
-                                 XSTATE_Hi16_ZMM_MASK | XSTATE_PKRU_MASK)
+                                 XSTATE_Hi16_ZMM_MASK | XSTATE_PKRU_MASK | \
+                                 XFEATURE_XTILE_MASK)
 #define XSTATE_AVX_512_MASK             (XSTATE_OPMASK_MASK |       \
                                          XSTATE_ZMM_Hi256_MASK |    \
                                          XSTATE_Hi16_ZMM_MASK)
