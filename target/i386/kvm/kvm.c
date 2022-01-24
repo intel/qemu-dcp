@@ -1710,8 +1710,7 @@ uint32_t kvm_x86_arch_cpuid(CPUX86State *env, struct kvm_cpuid_entry2 *entries,
                 c = &entries[cpuid_i++];
             }
             break;
-        case 0x14:
-        case 0x1d: {
+        case 0x14: {
             uint32_t times;
 
             c->function = i;
