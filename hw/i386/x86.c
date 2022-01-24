@@ -44,8 +44,6 @@
 #include "sysemu/reset.h"
 #include "trace.h"
 
-#include <sys/syscall.h>
-
 #include "hw/i386/x86.h"
 #include "target/i386/cpu.h"
 #include "hw/i386/topology.h"
@@ -122,29 +120,6 @@ out:
     object_unref(cpu);
 }
 
-static void x86_xsave_req_perm(void)
-{
-    unsigned long bitmask;
-
-    long rc = syscall(SYS_arch_prctl, ARCH_REQ_XCOMP_GUEST_PERM,
-                      XSTATE_XTILE_DATA_BIT);
-    if (rc) {
-        /*
-         *The older kernel version(<5.15) can't support
-         *ARCH_REQ_XCOMP_GUEST_PERM and directly return.
-         */
-        return;
-    }
-
-    rc = syscall(SYS_arch_prctl, ARCH_GET_XCOMP_GUEST_PERM, &bitmask);
-    if (rc) {
-        error_report("prctl(ARCH_GET_XCOMP_GUEST_PERM) error: %ld", rc);
-    } else if (!(bitmask & XFEATURE_XTILE_MASK)) {
-        error_report("prctl(ARCH_REQ_XCOMP_GUEST_PERM) failure "
-                     "and bitmask=0x%lx", bitmask);
-    }
-}
-
 void x86_cpus_init(X86MachineState *x86ms, int default_cpu_version)
 {
     int i;
@@ -152,8 +127,6 @@ void x86_cpus_init(X86MachineState *x86ms, int default_cpu_version)
     MachineState *ms = MACHINE(x86ms);
     MachineClass *mc = MACHINE_GET_CLASS(x86ms);
 
-    /* Request AMX pemission for guest */
-    x86_xsave_req_perm();
     x86_cpu_set_default_version(default_cpu_version);
 
     /*
