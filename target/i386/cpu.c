@@ -5716,6 +5716,7 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
             if ((x86_cpu_xsave_xcr0_components(cpu) >> count) & 1) {
                 *eax = esa->size;
                 *ebx = esa->offset;
+                *ecx = esa->ecx & ESA_FEATURE_ALIGN64_MASK;
             } else if ((x86_cpu_xsave_xss_components(cpu) >> count) & 1) {
                 *eax = esa->size;
                 *ebx = 0;

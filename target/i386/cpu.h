@@ -585,6 +585,11 @@ typedef enum X86Seg {
 #define XSTATE_AMX_MASK                 (XSTATE_XTILE_CFG_MASK |    \
                                          XSTATE_XTILE_DATA_MASK)
 
+#define ESA_FEATURE_ALIGN64_BIT         1
+
+#define ESA_FEATURE_ALIGN64_MASK        (1U << ESA_FEATURE_ALIGN64_BIT)
+
+
 /* CPUID feature words */
 typedef enum FeatureWord {
     FEAT_1_EDX,         /* CPUID[1].EDX */
@@ -1471,6 +1476,7 @@ QEMU_BUILD_BUG_ON(sizeof(XSavesArchLBR) != 0x328);
 typedef struct ExtSaveArea {
     uint32_t feature, bits;
     uint32_t offset, size;
+    uint32_t ecx;
 } ExtSaveArea;
 
 #define XSAVE_STATE_AREA_COUNT (XSTATE_ARCH_LBR + 1)
