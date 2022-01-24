@@ -2423,15 +2423,6 @@ int kvm_arch_init(MachineState *ms, KVMState *s)
 
     kvm_get_supported_feature_msrs(s);
 
-    if (kvm_check_extension(s, KVM_CAP_X86_USER_SPACE_MSR)) {
-        ret = kvm_vm_enable_cap(s, KVM_CAP_X86_USER_SPACE_MSR, 0, KVM_MSR_EXIT_REASON_USERSPACE);
-	if (ret < 0) {
-            error_report("kvm: Failed to enable userspace msr cap: %s",
-                         strerror(-ret));
-            return ret;
-        }
-    }
-
     uname(&utsname);
     lm_capable_kernel = strcmp(utsname.machine, "x86_64") == 0;
 
