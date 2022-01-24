@@ -112,13 +112,10 @@ static void kvm_cpu_xsave_init(void)
 
         if (esa->size) {
             int sz = kvm_arch_get_supported_cpuid(s, 0xd, i, R_EAX);
-            uint32_t ecx = kvm_arch_get_supported_cpuid(s, 0xd, i, R_ECX);
             if (sz != 0) {
                 assert(esa->size == sz);
                 esa->offset = kvm_arch_get_supported_cpuid(s, 0xd, i, R_EBX);
             }
-            esa->need_align = ecx & (1u << 1) ? 1 : 0;
-            esa->support_xfd = ecx & (1u << 2) ? 1 : 0;
         }
     }
 }
