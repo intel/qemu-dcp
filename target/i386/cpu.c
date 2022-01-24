@@ -922,7 +922,7 @@ FeatureWordInfo feature_word_info[FEATURE_WORDS] = {
         .type = CPUID_FEATURE_WORD,
         .feat_names = {
             "xsaveopt", "xsavec", "xgetbv1", "xsaves",
-            "xfd", NULL, NULL, NULL,
+            NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL,
             NULL, NULL, NULL, NULL,
@@ -5728,11 +5728,10 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
             if ((x86_cpu_xsave_xcr0_components(cpu) >> count) & 1) {
                 *eax = esa->size;
                 *ebx = esa->offset;
-                *ecx = (esa->need_align << 1) | (esa->support_xfd << 2);
             } else if ((x86_cpu_xsave_xss_components(cpu) >> count) & 1) {
                 *eax = esa->size;
                 *ebx = 0;
-                *ecx = (esa->need_align << 1) | (esa->support_xfd << 2) | 1;
+                *ecx = 1;
             }
         }
         break;
