@@ -6,10 +6,16 @@ Purpose
 =======
 Prepare for releasing public SPR BKC QEMU to external and internal customers.
 
+SPR-BKC-QEMU-v1.6
+----------------
+
+9. Revert the AMX QEMU patch and backport a new version(Yang Zhong)
+10. A code hack to avoid annoying QEMU command work around(Chenyi Qiang)
+
 SPR-BKC-QEMU-v1.5
 ----------------
 
-9. vIOMMU 5lvl paging support and on bug fix(Yi Liu)
+9. vIOMMU 5lvl paging support and one bug fix(Yi Liu)
 
 SPR-BKC-QEMU-v1.4
 ----------------
