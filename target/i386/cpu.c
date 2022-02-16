@@ -5550,7 +5550,15 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
             if ((*ecx & CPUID_7_0_ECX_PKU) && env->cr[4] & CR4_PKE_MASK) {
                 *ecx |= CPUID_7_0_ECX_OSPKE;
             }
+
+            /*
+             * The cpuid of arch lbr should also be removed as XSS bits when
+             * the vPMU is off
+             */
             *edx = env->features[FEAT_7_0_EDX]; /* Feature flags */
+            if (!cpu->enable_pmu) {
+                *edx &= ~CPUID_7_0_EDX_ARCH_LBR;
+            }
 
             /*
              * SGX cannot be emulated in software.  If hardware does not
