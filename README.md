@@ -6,11 +6,16 @@ Purpose
 =======
 Prepare for releasing public SPR BKC QEMU to external and internal customers.
 
+SPR-BKC-QEMU-v1.7
+----------------
+
+12. 0001-i386-cpu-Remove-CPUID_7_0_EDX_ARCH_LBR-if-vPMU-is-di.patch(Yuan Yao)
+
 SPR-BKC-QEMU-v1.6
 ----------------
 
-9. Revert the AMX QEMU patch and backport a new version(Yang Zhong)
-10. A code hack to avoid annoying QEMU command work around(Chenyi Qiang)
+10. Revert the AMX QEMU patch and backport a new version(Yang Zhong)
+11. A hack to avoid annoying QEMU command work around(Chenyi Qiang)
 
 SPR-BKC-QEMU-v1.5
 ----------------
