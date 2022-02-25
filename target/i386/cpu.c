@@ -6325,8 +6325,7 @@ static void x86_cpu_enable_xsave_components(X86CPU *cpu)
             }
         }
 
-        if (kvm_tdx_enabled() && (i == XSTATE_ARCH_LBR || i == XSTATE_XTILE_CFG_BIT ||
-            i == XSTATE_XTILE_DATA_BIT))
+        if (kvm_tdx_enabled() && (i == XSTATE_ARCH_LBR))
                 mask &= ~(1ULL << i);
     }
 
