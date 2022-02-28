@@ -6,6 +6,11 @@ Purpose
 =======
 Prepare for releasing public SPR BKC QEMU to external and internal customers.
 
+SPR-BKC-QEMU-v1.8
+----------------
+
+12. TDX: AMX: enable AMX xstate(Yang Zhong)
+
 SPR-BKC-QEMU-v1.7
 ----------------
 
