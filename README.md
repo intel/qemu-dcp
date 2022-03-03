@@ -6,10 +6,20 @@ Purpose
 =======
 Prepare for releasing public SPR BKC QEMU to external and internal customers.
 
+SPR-BKC-QEMU-v1.9
+----------------
+
+14. Backport some upstream bug fix
+7e6055c99f2f(tests: bios-tables-test update expected blobs)
+211afe5c69b5(hw/i386/acpi-build: Deny control on PCIe Native Hot-plug in _OSC)
+be12e3a016f1(bios-tables-test: Allow changes in DSDT ACPI tables)
+c318bef76206(hw/acpi/ich9: Add compat prop to keep HPC bit set for 6.1 machine type)
+2aa1842d6d79(pcie: rename 'native-hotplug' to 'x-native-hotplug')
+
 SPR-BKC-QEMU-v1.8
 ----------------
 
-12. TDX: AMX: enable AMX xstate(Yang Zhong)
+13. TDX: AMX: enable AMX xstate(Yang Zhong)
 
 SPR-BKC-QEMU-v1.7
 ----------------
