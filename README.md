@@ -6,6 +6,12 @@ Purpose
 =======
 Prepare for releasing public SPR BKC QEMU to external and internal customers.
 
+SPR-BKC-QEMU-v1.10
+----------------
+
+15. 0001-kvm-support-512-bit-operand-sync-between-kvm-and-qem.patch
+0002-kvm-a-work-around-to-solve-uapi-header-sync-issue.patch (Sun Yi)
+
 SPR-BKC-QEMU-v1.9
 ----------------
 
