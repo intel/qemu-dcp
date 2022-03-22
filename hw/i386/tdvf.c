@@ -314,6 +314,7 @@ int load_tdvf(const char *filename, const char *config_firmware_volume)
     size = lseek(fd, 0, SEEK_END);
     if (size < 0) {
         error_report("can't lseek tdvf %s.", filename);
+        close(fd);
         return -1;
     }
     fw->file_name = g_strdup(filename);
@@ -344,6 +345,9 @@ int load_tdvf(const char *filename, const char *config_firmware_volume)
     }
 
     if (tdvf_parse_metadata_header(fw, fd, &metadata) < 0) {
+        if (cfv_fd >= 0) {
+            close(cfv_fd);
+        }
         close(fd);
         return -1;
     }
@@ -365,7 +369,9 @@ int load_tdvf(const char *filename, const char *config_firmware_volume)
         }
     }
 
+    if (cfv_fd >= 0) {
+        close(cfv_fd);
+    }
     close(fd);
-    close(cfv_fd);
     return 0;
 }
