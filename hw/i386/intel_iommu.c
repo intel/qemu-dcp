@@ -2020,6 +2020,7 @@ static int vtd_flt_page_walk_level(dma_addr_t addr,
 
     subpage_size = 1ULL << vtd_flpt_level_shift(level);
     subpage_mask = vtd_flpt_level_page_mask(level);
+    event.entry.addr_mask = 0;
 
     while (iova < end) {
         iova_next = (iova & subpage_mask) + subpage_size;
@@ -6572,6 +6573,7 @@ static bool vtd_decide_config(IntelIOMMUState *s, Error **errp)
             if (version != IOASID_API_VERSION) {
                 error_setg(errp, "supported ioasid version: %d, "
                            "reported version: %d", IOASID_API_VERSION, version);
+                qemu_close(fd);
                 return false;
             }
 
@@ -6579,12 +6581,14 @@ static bool vtd_decide_config(IntelIOMMUState *s, Error **errp)
             info.argsz = sizeof(info);
             if (ioctl(fd, IOASID_GET_INFO, &info)) {
                 error_setg(errp, "Failed to get ioasid info, %m");
+                qemu_close(fd);
                 return false;
             }
 
             if ((VTD_PASID_SS + 1) > info.ioasid_bits) {
                 error_setg(errp, "supported pasid bits: %u, reported pasid "
                            "bits: %u", VTD_PASID_SS + 1, info.ioasid_bits);
+                qemu_close(fd);
                 return false;
             }
 

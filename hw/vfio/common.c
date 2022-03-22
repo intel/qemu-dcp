@@ -1754,13 +1754,18 @@ void vfio_region_unmap(VFIORegion *region)
  */
 void vfio_region_reset_mmap(VFIODevice *vbasedev, VFIORegion *region, int index)
 {
-    struct vfio_region_info *new;
+    struct vfio_region_info *new = NULL;
 
     if (!region->mem) {
         return;
     }
 
     if (vfio_get_region_info(vbasedev, index, &new)) {
+        goto out;
+    }
+
+    if (!new) {
+        error_report("vfio: region info is NULL!\n");
         goto out;
     }
 
@@ -2164,7 +2169,7 @@ vfio_get_iommu_info_cap(struct vfio_iommu_type1_info *info, uint16_t id)
 static int vfio_get_nesting_iommu_cap(VFIOContainer *container,
                    struct vfio_iommu_type1_info_cap_nesting **cap_nesting)
 {
-    struct vfio_iommu_type1_info *info;
+    struct vfio_iommu_type1_info *info = NULL;
     struct vfio_info_cap_header *hdr;
     struct vfio_iommu_type1_info_cap_nesting *cap;
     struct iommu_nesting_info *nest_info;
@@ -2174,6 +2179,11 @@ static int vfio_get_nesting_iommu_cap(VFIOContainer *container,
     ret = vfio_get_iommu_info(container, &info);
     if (ret) {
         return ret;
+    }
+
+    if (!info) {
+        error_report("vfio: nesting info is NULL!\n");
+        return -EINVAL;
     }
 
     hdr = vfio_get_iommu_info_cap(info,
