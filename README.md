@@ -6,6 +6,13 @@ Purpose
 =======
 Prepare for releasing public SPR BKC QEMU to external and internal customers.
 
+SPR-BKC-QEMU-v1.11
+----------------
+
+16.
+0001-hw-i386-add-some-missing-handling-of-fd-operation.patch (Chenyi Qiang)
+0001-vfio-intel_iommu-fix-potential-issues-scanned-out.patch (Yi Sun)
+
 SPR-BKC-QEMU-v1.10
 ----------------
 
