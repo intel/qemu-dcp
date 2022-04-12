@@ -6,8 +6,14 @@ Purpose
 =======
 Prepare for releasing public SPR BKC QEMU to external and internal customers.
 
-SPR-BKC-QEMU-v1.11
-----------------
+SPR-BKC-QEMU-v2.1
+-----------------
+
+17.
+Back port a CVE commit from upstream (Mark Horn)
+
+SPR-BKC-QEMU-v1.11 (SPR-BKC-QEMU-pub-v1)
+----------------------------------------
 
 16.
 0001-hw-i386-add-some-missing-handling-of-fd-operation.patch (Chenyi Qiang)
