@@ -6,6 +6,11 @@ Purpose
 =======
 Prepare for releasing public SPR BKC QEMU to external and internal customers.
 
+SPR-BKC-QEMU-v2.2
+-----------------
+
+18. Fix one issue related to live migration with ADI assigned (Yi Sun)
+
 SPR-BKC-QEMU-v2.1
 -----------------
 
