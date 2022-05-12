@@ -6,6 +6,13 @@ Purpose
 =======
 Prepare for releasing public SPR BKC QEMU to external and internal customers.
 
+SPR-BKC-QEMU-v2.3
+-----------------
+
+19. make ABI compatible (Yi Sun)
+20. Backport two CVE commits from upstream (Mark Horn)
+21. Fix for ACCESS_PLATFORM negotiation from upstream (Chenyi Qiang)
+
 SPR-BKC-QEMU-v2.2
 -----------------
 
