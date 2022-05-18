@@ -6,6 +6,11 @@ Purpose
 =======
 Prepare for releasing public SPR BKC QEMU to external and internal customers.
 
+SPR-BKC-QEMU-v2.4
+-----------------
+
+22. Backport three CVE commits from upstream (Mark Horn)
+
 SPR-BKC-QEMU-v2.3
 -----------------
 
