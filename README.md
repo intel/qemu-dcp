@@ -6,6 +6,11 @@ Purpose
 =======
 Prepare for releasing public SPR BKC QEMU to external and internal customers.
 
+SPR-BKC-QEMU-v2.5
+-----------------
+
+23. Fix for SIMD kvm unit test failure (Yi Sun)
+
 SPR-BKC-QEMU-v2.4
 -----------------
 
